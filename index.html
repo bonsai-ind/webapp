@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#6C5CE7" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <title>Hush</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Locked design tokens (DESIGN.md §3.1) — semantic/ink/line tokens are
+         identical across all brands. --primary is overridden per-seller at runtime
+         by BrandProvider; the value here is the default indigo. */
+      :root {
+        --bg: #f5f5f9;
+        --surface: #ffffff;
+        --surface-2: #fafafd;
+        --primary: #6c5ce7;
+        --primary-700: #5847d6;
+        --primary-soft: #eeebff;
+        --primary-soft-2: #e2ddfb;
+        --ink: #16171f;
+        --ink-2: #585a6b;
+        --ink-3: #9b9dae;
+        --line: #ececf3;
+        --line-2: #e2e2ec;
+        --calm: #15a05a;
+        --calm-soft: #e4f5ec;
+        --alert: #e5484d;
+        --alert-2: #c81e25;
+        --alert-soft: #fce9e9;
+        --amber: #e08700;
+        --amber-soft: #fbf0dc;
+        --sleep: #5b6ce0;
+        --sleep-soft: #e8ebfb;
+        --feed: #1fa2b0;
+        --feed-soft: #e0f4f6;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Hanken Grotesk", system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

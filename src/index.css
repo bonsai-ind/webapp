@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Map the DESIGN.md tokens (defined as CSS custom properties in index.html) into
+   Tailwind's theme. `inline` makes the generated utilities reference the vars at
+   runtime, so BrandProvider's per-seller override of --primary flows straight
+   into `bg-primary` / `text-primary` etc. Semantic tokens stay locked. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-primary: var(--primary);
+  --color-primary-700: var(--primary-700);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-2: var(--primary-soft-2);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+
+  --color-calm: var(--calm);
+  --color-calm-soft: var(--calm-soft);
+  --color-alert: var(--alert);
+  --color-alert-soft: var(--alert-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-sleep: var(--sleep);
+  --color-sleep-soft: var(--sleep-soft);
+  --color-feed: var(--feed);
+  --color-feed-soft: var(--feed-soft);
+
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-card: 22px;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+}
+
+/* Cry-alert entrance (DESIGN.md §6): scale + opacity in. Applied via
+   motion-safe: so prefers-reduced-motion shows the resting end-state. */
+@keyframes cry-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -1,0 +1,17 @@
+# OS / editor
+.DS_Store
+
+# deps / build
+node_modules
+dist
+*.tsbuildinfo
+
+# env — keep .env.example tracked, ignore real/local env files
+.env
+.env.local
+.env.*.local
+
+.agents
+.claude
+skills-lock.json
+test.http

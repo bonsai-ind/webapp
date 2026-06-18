@@ -1,0 +1,14 @@
+{
+  "name": "Hush — Baby Monitor",
+  "short_name": "Hush",
+  "description": "Live cry alerts and growth tracking for your baby.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F5F9",
+  "theme_color": "#6C5CE7",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
