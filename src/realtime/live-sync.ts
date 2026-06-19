@@ -10,7 +10,7 @@ export interface StreamFactory {
     token: string;
     lastEventId?: string;
     onEvent: (e: StreamEvent) => void;
-    onError: () => void;
+    onError: (code?: number) => void;
   }): StreamHandle;
 }
 
@@ -31,6 +31,10 @@ export interface LiveSyncConfig {
   // Reconnect backoff. Delays reopen attempts so a persistent failure doesn't
   // hammer the backend in a tight loop.
   backoff?: { baseMs: number; maxMs: number };
+  // Called when the stream closes with a 401 (token expired). The callback
+  // should attempt a token refresh; if it resolves, LiveSync will reconnect
+  // with a fresh token. If it rejects, LiveSync stops and will not reconnect.
+  onAuthError?: () => Promise<void>;
 }
 
 const DEFAULT_BACKOFF = { baseMs: 1000, maxMs: 30000 };
@@ -62,7 +66,28 @@ export function createLiveSync(config: LiveSyncConfig): LiveSync {
     for (const handler of handlers.get(event.type) ?? []) handler(event.data);
   }
 
-  function scheduleReconnect(): void {
+  function scheduleReconnect(code?: number): void {
+    if (code === 401) {
+      // Token expired: attempt a refresh before reconnecting. If the refresh
+      // callback is absent or rejects, stop reconnecting entirely.
+      if (!config.onAuthError) {
+        stop();
+        return;
+      }
+      config.onAuthError().then(
+        () => {
+          // Refresh succeeded — reconnect immediately (no backoff penalty for
+          // a token rotation; the connection itself was healthy up to this point).
+          connect();
+        },
+        () => {
+          // Refresh failed — caller is responsible for logging out; stop here.
+          stop();
+        },
+      );
+      return;
+    }
+
     const delay = nextDelay;
     nextDelay = Math.min(nextDelay * 2, backoff.maxMs);
     setTimeout(connect, delay);

@@ -20,6 +20,7 @@ export interface Session {
   logout(): Promise<void>;
   authedFetch(path: string, init?: RequestInit): Promise<Response>;
   onAuthChange(listener: (state: AuthState) => void): () => void;
+  refreshToken(): Promise<void>;
 }
 
 export interface SessionConfig {
@@ -163,6 +164,13 @@ export function createSession(config: SessionConfig): Session {
     return inFlightRefresh;
   }
 
+  // Exposed on the Session interface so external callers (e.g. main.tsx wiring
+  // up LiveSync's onAuthError) can trigger a token refresh without going through
+  // authedFetch. Coalescing is inherited from the internal refresh() function.
+  function refreshToken(): Promise<void> {
+    return refresh();
+  }
+
   function send(path: string, init: RequestInit): Promise<Response> {
     return fetch(`${config.baseUrl}${path}`, {
       ...init,
@@ -182,5 +190,5 @@ export function createSession(config: SessionConfig): Session {
     return send(path, init);
   }
 
-  return { login, acceptInvite, restore, me, getAccessToken, switchOrg, logout, authedFetch, onAuthChange };
+  return { login, acceptInvite, restore, me, getAccessToken, switchOrg, logout, authedFetch, onAuthChange, refreshToken };
 }

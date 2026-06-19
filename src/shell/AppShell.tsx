@@ -10,6 +10,8 @@ import { TodayScreen } from "../today/TodayScreen";
 import { CriesScreen } from "../cries/CriesScreen";
 import { GrowthScreen } from "../growth/GrowthScreen";
 import { MonitorScreen } from "../video/MonitorScreen";
+import { SleepScreen } from "../sleep/SleepScreen";
+import { FeedingScreen } from "../feeding/FeedingScreen";
 import { AppHeader } from "./AppHeader";
 
 const NOOP_LIVE_SYNC: LiveSync = {
@@ -28,6 +30,7 @@ function greeting(): string {
 
 const TABS = ["Today", "Monitor", "Cries", "Growth"] as const;
 type Tab = (typeof TABS)[number];
+type SubScreen = "sleep" | "feeding" | null;
 
 export function AppShell({
   session,
@@ -39,6 +42,7 @@ export function AppShell({
   liveSync?: LiveSync;
 }) {
   const [active, setActive] = useState<Tab>("Today");
+  const [subscreen, setSubscreen] = useState<SubScreen>(null);
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const { babies } = useBabies(session);
   const { orgs } = useOrgs(session);
@@ -73,14 +77,30 @@ export function AppShell({
         aria-labelledby={`tab-${active}`}
         className="flex flex-1 flex-col gap-[18px] px-[18px] pt-2"
       >
-        <h1 className="text-[25px] font-extrabold tracking-[-0.03em] text-ink">{active}</h1>
-        {active === "Today" && (
+        {subscreen !== null && (
+          <button onClick={() => setSubscreen(null)} className="flex items-center gap-1 text-[13px] font-semibold text-primary mb-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Today
+          </button>
+        )}
+        <h1 className="text-[25px] font-extrabold tracking-[-0.03em] text-ink">
+          {subscreen === "sleep" ? "Sleep" : subscreen === "feeding" ? "Feeding" : active}
+        </h1>
+        {active === "Today" && subscreen === null && (
           <TodayScreen
             session={session}
             babyId={activeBaby?.id}
             liveSync={liveSync}
             onOpenMonitor={() => setActive("Monitor")}
+            onOpenSleep={() => setSubscreen("sleep")}
+            onOpenFeeding={() => setSubscreen("feeding")}
           />
+        )}
+        {active === "Today" && subscreen === "sleep" && (
+          <SleepScreen session={session} babyId={activeBaby?.id} />
+        )}
+        {active === "Today" && subscreen === "feeding" && (
+          <FeedingScreen session={session} babyId={activeBaby?.id} />
         )}
         {active === "Monitor" && (
           <MonitorScreen session={session} baseUrl={baseUrl} babyId={activeBaby?.id} />
@@ -99,7 +119,7 @@ export function AppShell({
             role="tab"
             id={`tab-${tab}`}
             aria-selected={tab === active}
-            onClick={() => setActive(tab)}
+            onClick={() => { setActive(tab); setSubscreen(null); }}
             className={`flex-1 py-3 font-mono text-[9px] font-medium uppercase tracking-[0.1em] transition-colors ${
               tab === active ? "text-primary" : "text-ink-3"
             }`}

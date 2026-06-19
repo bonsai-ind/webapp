@@ -17,6 +17,16 @@ export function createFetchStreamFactory(): StreamFactory {
           Authorization: `Bearer ${token}`,
           ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),
         },
+        async onopen(response) {
+          if (response.status === 401) {
+            onError(401);
+            throw new Error("unauthorized");
+          }
+          if (!response.ok) {
+            onError();
+            throw new Error(`stream open failed: ${response.status}`);
+          }
+        },
         onmessage(ev) {
           onEvent({
             id: ev.id || undefined,

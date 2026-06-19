@@ -26,6 +26,14 @@ const liveSync = createLiveSync({
   url: `${baseUrl}/live`,
   getToken: () => session.getAccessToken() ?? "",
   factory: createFetchStreamFactory(),
+  onAuthError: async () => {
+    try {
+      await session.refreshToken()
+    } catch {
+      void session.logout()
+      liveSync.stop()
+    }
+  },
 });
 session.onAuthChange((state) =>
   state.status === "authenticated" ? liveSync.start() : liveSync.stop(),

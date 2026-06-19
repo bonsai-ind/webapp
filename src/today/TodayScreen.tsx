@@ -21,11 +21,15 @@ export function TodayScreen({
   babyId,
   liveSync,
   onOpenMonitor,
+  onOpenSleep,
+  onOpenFeeding,
 }: {
   session: Session;
   babyId?: string;
   liveSync?: LiveSync;
   onOpenMonitor?: () => void;
+  onOpenSleep?: () => void;
+  onOpenFeeding?: () => void;
 }) {
   const { summary } = useTodaySummary(session, babyId);
   const cryStatus = useCryStatus(liveSync ?? NOOP_LIVE_SYNC);
@@ -37,9 +41,21 @@ export function TodayScreen({
       {shouldPromptPush() && <EnablePushCard session={session} />}
 
       <div className="grid grid-cols-3 gap-3">
-        <StatTile label="Sleep" value={summary?.sleep ?? "—"} accent="sleep" />
+        {onOpenSleep ? (
+          <button type="button" onClick={onOpenSleep} className="text-left w-full focus:outline-none">
+            <StatTile label="Sleep" value={summary?.sleep ?? "—"} accent="sleep" />
+          </button>
+        ) : (
+          <StatTile label="Sleep" value={summary?.sleep ?? "—"} accent="sleep" />
+        )}
         <StatTile label="Cry episodes" value={summary?.cryEpisodes ?? "—"} accent="alert" />
-        <StatTile label="Feeds" value={summary?.feeds ?? "—"} accent="feed" />
+        {onOpenFeeding ? (
+          <button type="button" onClick={onOpenFeeding} className="text-left w-full focus:outline-none">
+            <StatTile label="Feeds" value={summary?.feeds ?? "—"} accent="feed" />
+          </button>
+        ) : (
+          <StatTile label="Feeds" value={summary?.feeds ?? "—"} accent="feed" />
+        )}
       </div>
     </div>
   );
