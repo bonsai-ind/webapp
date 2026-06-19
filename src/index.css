@@ -56,3 +56,16 @@
     transform: scale(1);
   }
 }
+
+/* Waveform bars (DESIGN.md §6): scaleY .4↔1, staggered per-bar. Used only
+   for active room audio — not when the app is idle. */
+@keyframes bob {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-bob {
+    animation: bob 0.8s ease-in-out infinite;
+  }
+}

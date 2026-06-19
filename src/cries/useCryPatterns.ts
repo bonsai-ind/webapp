@@ -3,7 +3,9 @@ import { useBabyResource } from "../babies/useBabyResource";
 
 export interface CryPatterns {
   avgPerDay: number;
+  avgSettleTimeMins?: number;
   hourly: number[];
+  likelyCauses?: Array<{ label: string; value: number }>;
 }
 
 export function useCryPatterns(

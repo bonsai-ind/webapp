@@ -37,7 +37,7 @@ export function App({
           />
         ) : (
           <AuthGate session={session}>
-            <AppShell session={session} baseUrl={baseUrl} />
+            <AppShell session={session} baseUrl={baseUrl} liveSync={liveSync} />
             {liveSync && <CryAlertOverlay liveSync={liveSync} />}
           </AuthGate>
         )}

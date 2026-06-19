@@ -7,12 +7,14 @@ const SOLID: Record<StatAccent, string> = {
   alert: "bg-alert",
   feed: "bg-feed",
   primary: "bg-primary",
+  amber: "bg-amber",
 };
 const SOFT: Record<StatAccent, string> = {
   sleep: "bg-sleep-soft",
   alert: "bg-alert-soft",
   feed: "bg-feed-soft",
   primary: "bg-primary-soft",
+  amber: "bg-amber-soft",
 };
 
 export function Bars({

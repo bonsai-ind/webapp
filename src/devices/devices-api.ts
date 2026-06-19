@@ -35,14 +35,8 @@ const toDevice = (d: DeviceDto): Device => ({
   createdAt: d.created_at,
 });
 
-export async function claimDevice(
-  session: Session,
-  pairingCode: string,
-  name: string,
-): Promise<Device> {
-  return toDevice(
-    await postJson<DeviceDto>(session, "/devices", { pairing_code: pairingCode, name }),
-  );
+export async function claimDevice(session: Session, name: string): Promise<Device> {
+  return toDevice(await postJson<DeviceDto>(session, "/devices", { name }));
 }
 
 export async function getDevice(session: Session, id: string): Promise<Device> {

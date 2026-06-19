@@ -31,6 +31,11 @@ session.onAuthChange((state) =>
   state.status === "authenticated" ? liveSync.start() : liveSync.stop(),
 );
 
+// A `revoked` control event means the server has revoked this session mid-stream
+// (token family revoked, or the user was removed from the device). Log out
+// immediately so the UI reaches the sign-in screen within seconds (Issue 10).
+liveSync.on("revoked", () => void session.logout());
+
 // An invite link carries ?token=… — present it as the accept-invite (create
 // account) flow rather than the normal sign-in.
 const inviteToken = new URLSearchParams(window.location.search).get("token") ?? undefined;

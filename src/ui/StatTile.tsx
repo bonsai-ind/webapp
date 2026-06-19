@@ -1,4 +1,4 @@
-export type StatAccent = "sleep" | "alert" | "feed" | "primary";
+export type StatAccent = "sleep" | "alert" | "feed" | "primary" | "amber";
 
 // Fixed class strings per accent (Tailwind needs literal classes, not built ones).
 const CHIP: Record<StatAccent, string> = {
@@ -6,6 +6,7 @@ const CHIP: Record<StatAccent, string> = {
   alert: "bg-alert-soft text-alert",
   feed: "bg-feed-soft text-feed",
   primary: "bg-primary-soft text-primary",
+  amber: "bg-amber-soft text-amber",
 };
 
 export function StatTile({
