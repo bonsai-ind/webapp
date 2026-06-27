@@ -27,15 +27,51 @@ function fakeSignaling() {
 }
 
 describe("startCall", () => {
-  test("the caller creates an offer and sends it over signaling", async () => {
+  test("the caller does not offer on construction — it waits for `ready`", () => {
     const pc = fakePeer();
     const sig = fakeSignaling();
 
     startCall({ pc, signaling: sig.channel, role: "caller" });
+
+    expect(pc.createOffer).not.toHaveBeenCalled();
+    expect(sig.sent).toHaveLength(0);
+  });
+
+  test("the caller creates an offer and sends it after a `ready` signal", async () => {
+    const pc = fakePeer();
+    const sig = fakeSignaling();
+
+    startCall({ pc, signaling: sig.channel, role: "caller" });
+    sig.receive({ kind: "ready" });
     await vi.waitFor(() => expect(sig.sent.length).toBeGreaterThan(0));
 
+    expect(pc.createOffer).toHaveBeenCalledOnce();
     expect(pc.setLocalDescription).toHaveBeenCalledWith({ type: "offer", sdp: "OFFER_SDP" });
     expect(sig.sent[0]).toEqual({ kind: "offer", sdp: { type: "offer", sdp: "OFFER_SDP" } });
+  });
+
+  test("a doubled `ready` yields exactly one offer", async () => {
+    const pc = fakePeer();
+    const sig = fakeSignaling();
+
+    startCall({ pc, signaling: sig.channel, role: "caller" });
+    sig.receive({ kind: "ready" });
+    sig.receive({ kind: "ready" });
+    await vi.waitFor(() => expect(sig.sent.length).toBeGreaterThan(0));
+
+    expect(pc.createOffer).toHaveBeenCalledOnce();
+    expect(sig.sent.filter((s) => s.kind === "offer")).toHaveLength(1);
+  });
+
+  test("the callee ignores `ready` and never offers", () => {
+    const pc = fakePeer();
+    const sig = fakeSignaling();
+
+    startCall({ pc, signaling: sig.channel, role: "callee" });
+    sig.receive({ kind: "ready" });
+
+    expect(pc.createOffer).not.toHaveBeenCalled();
+    expect(sig.sent).toHaveLength(0);
   });
 
   test("the caller applies a received answer as the remote description", async () => {
@@ -43,6 +79,7 @@ describe("startCall", () => {
     const sig = fakeSignaling();
 
     startCall({ pc, signaling: sig.channel, role: "caller" });
+    sig.receive({ kind: "ready" });
     sig.receive({ kind: "answer", sdp: { type: "answer", sdp: "ANSWER_SDP" } });
 
     await vi.waitFor(() =>

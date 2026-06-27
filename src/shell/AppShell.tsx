@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Session } from "../session/session";
 import type { LiveSync } from "../realtime/live-sync";
 import { useCryStatus } from "../cries/useCryStatus";
+import { CryAlertOverlay } from "../cries/CryAlertOverlay";
+import { useUnreadCount } from "../notifications/useNotifications";
+import { NotificationsOverlay } from "../notifications/NotificationsOverlay";
 import { useBabies } from "../babies/useBabies";
 import { useOrgs } from "../auth/useOrgs";
 import { SwitchOrgMenu } from "../auth/SwitchOrgMenu";
@@ -43,6 +46,7 @@ export function AppShell({
 }) {
   const [active, setActive] = useState<Tab>("Today");
   const [subscreen, setSubscreen] = useState<SubScreen>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const { babies } = useBabies(session);
   const { orgs } = useOrgs(session);
@@ -53,6 +57,38 @@ export function AppShell({
   // when no liveSync is connected — e.g. in tests).
   const cryStatus = useCryStatus(liveSync ?? NOOP_LIVE_SYNC);
 
+  // Bell badge (ADR 0014). The live `notification` event refreshes the badge +
+  // history; refetch-on-focus (global) self-heals a missed event.
+  const { unread } = useUnreadCount(session);
+  useEffect(() => {
+    if (!liveSync) return;
+    return liveSync.on("notification", () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+  }, [liveSync, queryClient]);
+
+  // Navigate to the Live Monitor for a specific baby (used by the cry alert's
+  // Open/Talk and the open-monitor notification action). Switches the active baby
+  // so MonitorScreen resolves that baby's device + call.
+  const goToMonitor = (babyId?: string) => {
+    if (babyId) setSelectedBabyId(babyId);
+    setActive("Monitor");
+    setSubscreen(null);
+  };
+
+  // Interpret a notification's opaque action: navigate to a known destination,
+  // ignore unknown kinds gracefully.
+  const handleNotificationAction = (action: unknown) => {
+    const a = action as { kind?: string; babyId?: string } | null;
+    if (a?.kind === "open-cries") {
+      if (a.babyId) setSelectedBabyId(a.babyId);
+      setActive("Cries");
+      setSubscreen(null);
+    } else if (a?.kind === "open-monitor") {
+      goToMonitor(a.babyId);
+    }
+  };
+
   return (
     <div className="flex min-h-dvh flex-col">
       <AppHeader
@@ -61,6 +97,8 @@ export function AppShell({
         babies={babies}
         onSelectBaby={setSelectedBabyId}
         status={cryStatus.status}
+        unreadCount={unread}
+        onOpenNotifications={() => setNotificationsOpen(true)}
         onSignOut={() => void session.logout()}
       />
       {orgs.length > 1 && (
@@ -128,6 +166,22 @@ export function AppShell({
           </button>
         ))}
       </nav>
+
+      {notificationsOpen && (
+        <div className="fixed inset-0 z-20 flex flex-col bg-bg pt-[env(safe-area-inset-top)]">
+          <NotificationsOverlay
+            session={session}
+            onClose={() => setNotificationsOpen(false)}
+            onAction={handleNotificationAction}
+          />
+        </div>
+      )}
+
+      {/* Full-screen cry takeover + live-sync cache mirroring (ADR 0014). Lives
+          here so Open/Talk can reach navigation. */}
+      {liveSync && (
+        <CryAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} onTalk={goToMonitor} />
+      )}
     </div>
   );
 }

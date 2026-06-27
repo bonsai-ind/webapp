@@ -5,6 +5,7 @@ import { cryStatusReducer, initialCryStatus, type CryStatus, type CryStatusEvent
 interface CryStatusData {
   state: "calm" | "fussing" | "crying";
   episodeId?: string;
+  babyId?: string;
   babyName?: string;
   cause?: string;
 }
@@ -14,6 +15,7 @@ function toEvent(data: CryStatusData): CryStatusEvent {
     return {
       kind: "crying",
       episodeId: data.episodeId ?? "",
+      babyId: data.babyId,
       babyName: data.babyName ?? "Your baby",
       cause: data.cause,
     };

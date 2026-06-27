@@ -2,6 +2,7 @@ export type CryState = "calm" | "fussing" | "crying";
 
 export interface CryEpisode {
   id: string;
+  babyId?: string;
   babyName: string;
   cause?: string;
 }
@@ -12,7 +13,7 @@ export interface CryStatus {
 }
 
 export type CryStatusEvent =
-  | { kind: "crying"; episodeId: string; babyName: string; cause?: string }
+  | { kind: "crying"; episodeId: string; babyId?: string; babyName: string; cause?: string }
   | { kind: "fussing" }
   | { kind: "calm" };
 
@@ -26,7 +27,7 @@ export function cryStatusReducer(state: CryStatus, event: CryStatusEvent): CrySt
     case "crying":
       return {
         status: "crying",
-        episode: { id: event.episodeId, babyName: event.babyName, cause: event.cause },
+        episode: { id: event.episodeId, babyId: event.babyId, babyName: event.babyName, cause: event.cause },
       };
     case "fussing":
       return { status: "fussing" };

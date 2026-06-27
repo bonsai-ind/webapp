@@ -21,6 +21,10 @@ describe("frameToSignal", () => {
       candidate: { candidate: "c" },
     });
   });
+
+  test("maps a ready frame to a ready signal (no payload)", () => {
+    expect(frameToSignal({ type: "ready", data: null })).toEqual({ kind: "ready" });
+  });
 });
 
 function fakeFactory() {

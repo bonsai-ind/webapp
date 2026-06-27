@@ -6,6 +6,7 @@ import type { Signal, SignalingChannel } from "./start-call";
 // Map a relayed SSE frame (event: offer|answer|ice + data) to a Signal the
 // call orchestrator understands.
 export function frameToSignal(event: StreamEvent): Signal {
+  if (event.type === "ready") return { kind: "ready" };
   if (event.type === "ice") return { kind: "ice", candidate: event.data };
   return { kind: event.type as "offer" | "answer", sdp: event.data };
 }

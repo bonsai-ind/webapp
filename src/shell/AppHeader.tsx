@@ -50,7 +50,8 @@ export function AppHeader({
   babies = [],
   onSelectBaby,
   status = "calm",
-  unread = false,
+  unreadCount = 0,
+  onOpenNotifications,
   onSignOut,
 }: {
   greeting?: string;
@@ -58,7 +59,8 @@ export function AppHeader({
   babies?: Baby[];
   onSelectBaby?: (id: string) => void;
   status?: StatusTone;
-  unread?: boolean;
+  unreadCount?: number;
+  onOpenNotifications?: () => void;
   onSignOut?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -108,12 +110,15 @@ export function AppHeader({
         <StatusPill tone={status} />
         <button
           type="button"
-          aria-label="Notifications"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          onClick={onOpenNotifications}
           className="relative grid size-10 place-items-center rounded-full border border-line bg-surface text-ink-2"
         >
           <Bell />
-          {unread && (
-            <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-alert ring-2 ring-surface" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 grid min-w-[18px] place-items-center rounded-full bg-alert px-1 text-[10px] font-bold leading-[18px] text-white ring-2 ring-surface">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
           )}
         </button>
         <button

@@ -59,6 +59,14 @@ _Avoid_: notification (too generic), warning
 **Hardware monitor**:
 The physical Hush device that watches a baby and streams audio/telemetry. Distinct from the "Live Monitor" *screen* that displays its feed.
 
+**Push-to-Talk**:
+The caregiver's mic is acquired only while the talk button is held, and released on let-go. Holding starts microphone capture; releasing stops the track entirely (clearing the OS mic indicator), so the caregiver is never live except while actively pressing.
+_Avoid_: walkie-talkie, intercom
+
+**Notification**:
+A persisted, per-recipient record that an event worth surfacing occurred, carrying its own read state, title, body, type, timestamp, and optional action/deep-link. A *generic envelope*: any producer can write any kind (a [[Cry alert]] onset, a device going offline, a share received, a system message), so it is deliberately not tied to crying. Distinct from **Cry alert** (the *live, time-critical delivery* of a crying event) and **Cry episode** (the underlying event). The Notification Center lists these newest-first and tracks unread count.
+_Avoid_: alert (that is the live cry delivery), message (overloaded), feed item.
+
 ### Realtime
 
 **Live-sync**:

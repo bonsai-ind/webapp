@@ -25,8 +25,12 @@ export function MonitorScreen({
 
   return (
     <MonitorView
-      ref={call.videoRef}
+      videoRef={call.videoRef}
+      audioRef={call.audioRef}
       status={call.status}
+      talkState={call.talkState}
+      hasVideo={call.hasVideo}
+      micError={call.micError}
       onHoldStart={call.holdStart}
       onHoldEnd={call.holdEnd}
     />

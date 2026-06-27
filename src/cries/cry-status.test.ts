@@ -14,6 +14,17 @@ describe("cryStatusReducer", () => {
     expect(next.episode).toEqual({ id: "ep-7", babyName: "Mia", cause: "hungry" });
   });
 
+  test("a crying event carries the episode's babyId (drives Open/Talk navigation)", () => {
+    const next = cryStatusReducer(initialCryStatus, {
+      kind: "crying",
+      episodeId: "ep-7",
+      babyId: "bby_42",
+      babyName: "Mia",
+    });
+
+    expect(next.episode?.babyId).toBe("bby_42");
+  });
+
   test("a calm event returns to calm and clears the episode", () => {
     const crying = cryStatusReducer(initialCryStatus, { kind: "crying", episodeId: "ep-7", babyName: "Mia" });
     const next = cryStatusReducer(crying, { kind: "calm" });

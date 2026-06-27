@@ -7,7 +7,6 @@ import { BrandProvider } from "../brand/BrandProvider";
 import { AuthGate } from "../auth/AuthGate";
 import { AcceptInviteScreen } from "../auth/AcceptInviteScreen";
 import { AppShell } from "../shell/AppShell";
-import { CryAlertOverlay } from "../cries/CryAlertOverlay";
 
 export function App({
   session,
@@ -38,7 +37,6 @@ export function App({
         ) : (
           <AuthGate session={session}>
             <AppShell session={session} baseUrl={baseUrl} liveSync={liveSync} />
-            {liveSync && <CryAlertOverlay liveSync={liveSync} />}
           </AuthGate>
         )}
       </BrandProvider>
