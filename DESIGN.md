@@ -96,7 +96,8 @@ Always pair a large value with its unit at ~50% size in `--ink-3` (e.g. **13**`h
 
 ## 4. Components
 
-- **AppHeader** — baby avatar (gradient circle, `--primary-soft`→`#D9D2FB`) + greeting (`--ink-2`, 12.5px) + baby name (17px/700) with chevron switcher; right side: **StatusPill** + bell icon button (40×40, `--surface`, `--line` border, red unread dot).
+- **AppHeader** — **BabyAvatar** (44×44) + greeting (`--ink-2`, 12.5px) + baby name (17px/700) with chevron switcher; right side: **StatusPill** + bell icon button (40×40, `--surface`, `--line` border, red unread dot). The switcher dropdown rows each prepend a small (28×28) BabyAvatar to the baby's name.
+- **BabyAvatar** — circular avatar slot. When `avatarUrl` is set, renders the photo (`<img>` with `alt={name}`) clipped to the circle. When empty *or* the image fails to load (`onError`), falls back to the baby's first initial (semibold, `--primary`) centered on a purple gradient (`--primary-soft`→`#D9D2FB`). Same component used by the AppHeader and the switcher dropdown; size is configurable.
 - **StatusPill** — `dot + label`, fully rounded, tonal. Tones: `calm` (green), `crying` (red), `fussing` (amber), `sleep`, `neutral`. Each = `*-soft` bg + solid fg/dot.
 - **StatTile** — icon chip (30×30, domain `*-soft` bg) + big `.num` value+unit + 11.5px label. Used in 3-up rows.
 - **TimelineRow** — 32×32 tonal icon chip + title (ellipsis) + optional sub-tag + mono timestamp; hairline `--line` divider, none on `last`.

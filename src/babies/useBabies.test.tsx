@@ -13,8 +13,8 @@ describe("useBabies", () => {
     server.use(
       http.get(`${BASE}/babies`, () =>
         HttpResponse.json([
-          { id: "baby_1", name: "Mia" },
-          { id: "baby_2", name: "Leo" },
+          { id: "baby_1", name: "Mia", avatarUrl: "https://cdn.example/mia.svg" },
+          { id: "baby_2", name: "Leo", avatarUrl: "" },
         ]),
       ),
     );
@@ -24,8 +24,8 @@ describe("useBabies", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.babies).toEqual([
-      { id: "baby_1", name: "Mia" },
-      { id: "baby_2", name: "Leo" },
+      { id: "baby_1", name: "Mia", avatarUrl: "https://cdn.example/mia.svg" },
+      { id: "baby_2", name: "Leo", avatarUrl: "" },
     ]);
   });
 });

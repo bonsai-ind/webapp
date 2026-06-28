@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StatusPill, type StatusTone } from "../ui/StatusPill";
 import type { Baby } from "../babies/useBabies";
+import { BabyAvatar } from "../babies/BabyAvatar";
 
 function ChevronDown() {
   return (
@@ -39,14 +40,15 @@ function SignOut() {
 }
 
 /**
- * App chrome shown above the tab content: gradient baby avatar + greeting +
- * baby name (with a switcher chevron) on the left; status + notifications on the
- * right. Presentational for now — baby/status are passed in (mock until the
- * domain data layer lands), and the switcher/bell are wired in later slices.
+ * App chrome shown above the tab content: baby avatar + greeting + baby name
+ * (with a switcher chevron) on the left; status + notifications on the right.
+ * The avatar renders the active baby's photo when set; otherwise the baby's
+ * first initial on a purple gradient (BabyAvatar handles the fallback).
  */
 export function AppHeader({
   greeting = "Good evening",
   babyName = "—",
+  avatarUrl,
   babies = [],
   onSelectBaby,
   status = "calm",
@@ -56,6 +58,7 @@ export function AppHeader({
 }: {
   greeting?: string;
   babyName?: string;
+  avatarUrl?: string;
   babies?: Baby[];
   onSelectBaby?: (id: string) => void;
   status?: StatusTone;
@@ -67,10 +70,7 @@ export function AppHeader({
 
   return (
     <header className="flex items-center gap-3 px-[18px] pb-3 pt-[max(18px,env(safe-area-inset-top))]">
-      <div
-        className="size-11 shrink-0 rounded-full bg-gradient-to-br from-primary-soft to-[#D9D2FB]"
-        aria-hidden="true"
-      />
+      <BabyAvatar name={babyName} avatarUrl={avatarUrl} size={44} />
       <div className="relative min-w-0">
         <button
           type="button"
@@ -96,8 +96,9 @@ export function AppHeader({
                     onSelectBaby?.(baby.id);
                     setOpen(false);
                   }}
-                  className="w-full px-4 py-2.5 text-left text-[13.5px] font-semibold text-ink transition-colors hover:bg-surface-2"
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13.5px] font-semibold text-ink transition-colors hover:bg-surface-2"
                 >
+                  <BabyAvatar name={baby.name} avatarUrl={baby.avatarUrl} size={28} />
                   {baby.name}
                 </button>
               </li>

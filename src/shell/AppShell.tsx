@@ -94,6 +94,7 @@ export function AppShell({
       <AppHeader
         greeting={greeting()}
         babyName={activeBaby?.name}
+        avatarUrl={activeBaby?.avatarUrl}
         babies={babies}
         onSelectBaby={setSelectedBabyId}
         status={cryStatus.status}

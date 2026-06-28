@@ -38,4 +38,21 @@ describe("AppHeader", () => {
     render(<AppHeader unreadCount={42} />);
     expect(screen.getByText("9+")).toBeInTheDocument();
   });
+
+  // The top-left avatar slot: photo when present, initial-on-gradient otherwise.
+  // BabyAvatar owns the fallback logic; these are the AppHeader-level wiring asserts.
+  test("renders the baby's photo in the header avatar when avatarUrl is set", () => {
+    render(<AppHeader babyName="Saanvi" avatarUrl="https://cdn.example/saanvi.svg" />);
+    expect(screen.getByRole("img", { name: "Saanvi" })).toHaveAttribute(
+      "src",
+      "https://cdn.example/saanvi.svg",
+    );
+  });
+
+  test("renders the baby's initial when avatarUrl is empty", () => {
+    render(<AppHeader babyName="Saanvi" avatarUrl="" />);
+    expect(screen.queryByRole("img")).toBeNull();
+    // The baby's initial appears in the header (and in the switcher dropdown if open).
+    expect(screen.getAllByText("S").length).toBeGreaterThan(0);
+  });
 });

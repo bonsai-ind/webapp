@@ -1,5 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import type { Session } from "../session/session";
-import { useBabyResource } from "../babies/useBabyResource";
+import { getJson } from "../api/get-json";
 
 export interface SleepPeriod {
   startHour: number; // 0-23
@@ -17,10 +18,21 @@ export interface SleepData {
   insight?: string;
 }
 
+export type SleepRange = "day" | "week" | "month";
+
+// useSleep takes the active SleepScreen tab (Day/Week/Month) as a range param
+// and asks the backend to aggregate accordingly. The query key includes the
+// range so each tab caches separately and refetches independently.
 export function useSleep(
   session: Session,
   babyId?: string,
+  range: SleepRange = "day",
 ): { sleep?: SleepData; isLoading: boolean } {
-  const { data, isLoading } = useBabyResource<SleepData>(session, babyId, "sleep");
-  return { sleep: data, isLoading };
+  const query = useQuery({
+    queryKey: ["sleep", babyId, range],
+    enabled: babyId !== undefined,
+    queryFn: () =>
+      getJson<SleepData>(session, `/babies/${babyId}/sleep?range=${range}`),
+  });
+  return { sleep: query.data, isLoading: query.isLoading };
 }

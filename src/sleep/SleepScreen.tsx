@@ -1,12 +1,18 @@
 import { useState } from "react";
 import type { Session } from "../session/session";
-import { useSleep } from "./useSleep";
+import { useSleep, type SleepRange } from "./useSleep";
 import { Ring } from "../ui/Ring";
 import { Segmented } from "../ui/Segmented";
 
 type Period = "Day" | "Week" | "Month";
 
 const PERIODS: Period[] = ["Day", "Week", "Month"];
+
+const RANGE_FOR: Record<Period, SleepRange> = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+};
 
 const RIBBON_HOURS = ["00", "06", "12", "18", "24"];
 
@@ -18,7 +24,7 @@ export function SleepScreen({
   babyId?: string;
 }) {
   const [period, setPeriod] = useState<Period>("Day");
-  const { sleep } = useSleep(session, babyId);
+  const { sleep } = useSleep(session, babyId, RANGE_FOR[period]);
 
   const achievedHours = sleep?.achievedHours ?? 0;
   const goalHours = sleep?.goalHours ?? 1; // avoid div-by-zero in Ring
