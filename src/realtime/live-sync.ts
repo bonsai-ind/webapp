@@ -54,6 +54,20 @@ export function createLiveSync(config: LiveSyncConfig): LiveSync {
   let lastEventId: string | undefined;
   let nextDelay = backoff.baseMs;
   const seenKeys = new Set<string>();
+  // Guards against connection leaks. `running` is true between start() and stop();
+  // `reconnectTimer` holds at most one pending reopen so a doubled error can't
+  // schedule two; `generation` bumps on every (re)connect so a superseded stream's
+  // late onEvent/onError callbacks are ignored instead of spawning a rival stream.
+  let running = false;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let generation = 0;
+
+  function clearReconnectTimer(): void {
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }
 
   function dispatch(event: StreamEvent): void {
     nextDelay = backoff.baseMs; // a delivered event proves the connection is healthy
@@ -88,26 +102,46 @@ export function createLiveSync(config: LiveSyncConfig): LiveSync {
       return;
     }
 
+    // A single error must schedule exactly one reopen. If one is already pending
+    // (e.g. the transport fired both onclose and onerror), ignore the duplicate
+    // so reconnects can't multiply into a stream of concurrent connections.
+    if (reconnectTimer !== null) return;
     const delay = nextDelay;
     nextDelay = Math.min(nextDelay * 2, backoff.maxMs);
-    setTimeout(connect, delay);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, delay);
   }
 
   function connect(): void {
+    if (!running) return; // stopped (or never started) — don't open a stream
+    handle?.close(); // never leave a previous stream open — that would leak connections
+    clearReconnectTimer();
+    const myGeneration = ++generation;
+    const active = () => running && myGeneration === generation;
     handle = config.factory.open({
       url: config.url,
       token: config.getToken(), // pulled fresh on every (re)connect
       lastEventId, // replay anything missed while disconnected
-      onEvent: dispatch,
-      onError: scheduleReconnect, // reopen after a backoff delay
+      onEvent: (event) => {
+        if (active()) dispatch(event);
+      },
+      onError: (code) => {
+        if (active()) scheduleReconnect(code);
+      },
     });
   }
 
   function start(): void {
-    connect();
+    running = true;
+    connect(); // closes any prior stream first, so repeated start()s never stack
   }
 
   function stop(): void {
+    running = false;
+    clearReconnectTimer();
+    generation++; // invalidate in-flight callbacks from the connection we're closing
     handle?.close();
     handle = null;
   }

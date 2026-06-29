@@ -29,6 +29,7 @@ function fakeFactory() {
     factory,
     opens,
     latest: () => opens[opens.length - 1],
+    openCount: () => opens.filter((o) => !o.closed).length,
   };
 }
 
@@ -155,6 +156,59 @@ describe("LiveSync", () => {
     reconnectAfter(2000, 3); // ×2
     reconnectAfter(4000, 4); // ×2 → 4000 (== cap)
     reconnectAfter(4000, 5); // would be 8000, capped at 4000
+  });
+
+  test("a repeated start() closes the prior stream instead of stacking a second", () => {
+    const fake = fakeFactory();
+    const client = createLiveSync({
+      url: "https://api.test/live",
+      getToken: () => "t",
+      factory: fake.factory,
+    });
+
+    client.start();
+    client.start(); // e.g. a second `authenticated` emission (org switch / token refresh)
+    client.start();
+
+    expect(fake.opens.length).toBe(3); // each start reconnects
+    expect(fake.openCount()).toBe(1); // ...but only the latest stream stays open — no leak
+  });
+
+  test("ignores an error from a stream that has already been superseded", () => {
+    const fake = fakeFactory();
+    const client = createLiveSync({
+      url: "https://api.test/live",
+      getToken: () => "t",
+      factory: fake.factory,
+    });
+
+    client.start();
+    const stale = fake.opens[0];
+    client.start(); // supersedes opens[0] with opens[1]
+
+    stale.onError(); // late failure from the closed connection
+    vi.runAllTimers();
+
+    expect(fake.opens.length).toBe(2); // no rival stream spawned by the stale callback
+    expect(fake.openCount()).toBe(1);
+  });
+
+  test("stop() prevents a pending reconnect from reopening", () => {
+    const fake = fakeFactory();
+    const client = createLiveSync({
+      url: "https://api.test/live",
+      getToken: () => "t",
+      factory: fake.factory,
+      backoff: { baseMs: 1000, maxMs: 30000 },
+    });
+
+    client.start();
+    fake.latest().onError(); // schedules a reconnect
+    client.stop(); // ...but we stop before it fires
+    vi.runAllTimers();
+
+    expect(fake.opens.length).toBe(1); // the queued reconnect was cancelled
+    expect(fake.openCount()).toBe(0);
   });
 
   test("resets the backoff after a successful connection delivers an event", () => {
