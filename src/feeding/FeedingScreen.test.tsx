@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { http, HttpResponse } from "msw";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { server } from "../test/server";
 import { renderWithQuery } from "../test/query";
 import { createSession } from "../session/session";
@@ -69,5 +70,39 @@ describe("FeedingScreen", () => {
     renderWithQuery(<FeedingScreen session={createSession({ baseUrl: BASE })} babyId="baby_1" />);
 
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  test("logs a feed via the + form, POSTs the entry, and shows it after refetch", async () => {
+    let postedBody: Record<string, unknown> | null = null;
+    let logged = false;
+    const newRow = { id: "fed_new", type: "bottle", time: "14:00", amount: "200 ml" };
+    server.use(
+      http.get(`${BASE}/babies/baby_1/feedings`, () =>
+        HttpResponse.json(
+          logged ? { ...PAYLOAD, todayFeeds: [...PAYLOAD.todayFeeds, newRow] } : PAYLOAD,
+        ),
+      ),
+      http.post(`${BASE}/babies/baby_1/feedings`, async ({ request }) => {
+        postedBody = (await request.json()) as Record<string, unknown>;
+        logged = true;
+        return HttpResponse.json(newRow);
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderWithQuery(<FeedingScreen session={createSession({ baseUrl: BASE })} babyId="baby_1" />);
+
+    await screen.findByText("2h ago"); // initial data loaded
+
+    await user.click(screen.getByRole("button", { name: /log a feed/i }));
+    await user.type(screen.getByLabelText(/amount \(ml\)/i), "200");
+    await user.click(screen.getByRole("button", { name: /save feed/i }));
+
+    // The form POSTs exactly what was entered (method + volume + an instant).
+    await waitFor(() => expect(postedBody).toMatchObject({ method: "bottle", volumeMl: 200 }));
+    expect(typeof postedBody!.startedAt).toBe("string");
+
+    // onSuccess invalidates the feedings query → refetch renders the new row.
+    expect(await screen.findByText("200 ml")).toBeInTheDocument();
   });
 });

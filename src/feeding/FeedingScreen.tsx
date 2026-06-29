@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { Session } from "../session/session";
 import { useFeeding } from "./useFeeding";
+import { AddFeedForm } from "./AddFeedForm";
 import { Bars } from "../ui/Bars";
 import { TimelineRow } from "../ui/TimelineRow";
 
@@ -34,6 +36,7 @@ interface FeedingScreenProps {
 
 export function FeedingScreen({ session, babyId }: FeedingScreenProps) {
   const { feeding } = useFeeding(session, babyId);
+  const [adding, setAdding] = useState(false);
 
   return (
     <div className="flex flex-col gap-[18px]">
@@ -43,12 +46,17 @@ export function FeedingScreen({ session, babyId }: FeedingScreenProps) {
         <button
           type="button"
           aria-label="Log a feed"
-          onClick={() => {}}
+          aria-expanded={adding}
+          onClick={() => setAdding((v) => !v)}
           className="size-10 rounded-full bg-feed text-white text-xl flex items-center justify-center"
         >
           +
         </button>
       </div>
+
+      {adding && (
+        <AddFeedForm session={session} babyId={babyId} onDone={() => setAdding(false)} />
+      )}
 
       {/* 2-up stat cards */}
       <div className="flex gap-3">
