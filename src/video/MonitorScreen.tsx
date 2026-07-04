@@ -1,5 +1,6 @@
 import type { Session } from "../session/session";
 import { useDevices } from "../devices/useDevices";
+import { useSimulateCamera } from "../devices/useSimulateCamera";
 import { MonitorView } from "./MonitorView";
 import { useCall } from "./useCall";
 
@@ -16,8 +17,10 @@ export function MonitorScreen({
   babyId?: string;
 }) {
   const { devices } = useDevices(session);
-  const deviceId = devices.find((d) => d.babyId === babyId)?.id;
+  const device = devices.find((d) => d.babyId === babyId);
+  const deviceId = device?.id;
   const call = useCall({ session, baseUrl, deviceId });
+  const simulate = useSimulateCamera(session);
 
   if (!deviceId) {
     return <p className="text-[13.5px] text-ink-2">No monitor is paired to this baby yet.</p>;
@@ -33,6 +36,10 @@ export function MonitorScreen({
       micError={call.micError}
       onHoldStart={call.holdStart}
       onHoldEnd={call.holdEnd}
+      // Device reported no physical camera (ADR 0010) → offer Simulate Camera.
+      cameraUnavailable={device?.cameraAvailable === false}
+      simulating={simulate.isPending}
+      onSimulate={() => simulate.mutate(deviceId)}
     />
   );
 }

@@ -1,13 +1,25 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { http, HttpResponse } from "msw";
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "../test/server";
 import { renderWithQuery } from "../test/query";
 import { createSession } from "../session/session";
+import { createLiveSync, type StreamEvent, type StreamFactory } from "../realtime/live-sync";
 import { AppShell } from "./AppShell";
 
 const BASE = "https://api.test";
+
+function fakeFactory() {
+  let emit: (e: StreamEvent) => void = () => {};
+  const factory: StreamFactory = {
+    open(opts) {
+      emit = opts.onEvent;
+      return { close() {} };
+    },
+  };
+  return { factory, emit: (e: StreamEvent) => emit(e) };
+}
 
 // AppShell loads babies for the header; default the endpoint to empty so tab
 // tests don't depend on baby data. Baby-specific tests override it.
@@ -80,6 +92,25 @@ describe("AppShell", () => {
     await userEvent.click(screen.getByRole("button", { name: "Leo" }));
 
     expect(screen.getByRole("button", { name: /switch baby/i })).toHaveTextContent("Leo");
+  });
+
+  test("mounts the safety overlay: a safety-status alert shows the banner", () => {
+    server.use(http.get(`${BASE}/babies`, () => HttpResponse.json([])));
+    const fake = fakeFactory();
+    const liveSync = createLiveSync({ url: "u", getToken: () => "t", factory: fake.factory });
+    renderWithQuery(
+      <AppShell session={createSession({ baseUrl: BASE })} baseUrl={BASE} liveSync={liveSync} />,
+    );
+    act(() => liveSync.start());
+
+    expect(screen.queryByText(/may be unsafe/i)).not.toBeInTheDocument();
+    act(() =>
+      fake.emit({
+        type: "safety-status",
+        data: { state: "alert", posture: "face_down_or_absent", episodeId: "pos-1", babyName: "Mia" },
+      }),
+    );
+    expect(screen.getByText(/mia may be unsafe/i)).toBeInTheDocument();
   });
 
   test("shows a placeholder and does not crash when there are no babies", async () => {
