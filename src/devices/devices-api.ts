@@ -6,6 +6,8 @@ export interface Device {
   name: string;
   babyId: string | null;
   createdAt: string;
+  // Device-reported physical-camera presence (ADR 0010); false → offer Simulate Camera.
+  cameraAvailable?: boolean;
 }
 
 export interface DeviceShare {
@@ -90,4 +92,10 @@ export async function revokeShare(
 
 export async function wakeDevice(session: Session, deviceId: string): Promise<void> {
   await postVoid(session, `/devices/${deviceId}/call/start`);
+}
+
+// simulateCamera asks a device with no physical camera to start its demo feed
+// (Simulate Camera, ADR 0010) — the device switches to the bundled demo source.
+export async function simulateCamera(session: Session, deviceId: string): Promise<void> {
+  await postVoid(session, `/devices/${deviceId}/demo/start`);
 }

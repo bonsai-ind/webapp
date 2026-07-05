@@ -67,6 +67,10 @@ _Avoid_: walkie-talkie, intercom
 A persisted, per-recipient record that an event worth surfacing occurred, carrying its own read state, title, body, type, timestamp, and optional action/deep-link. A *generic envelope*: any producer can write any kind (a [[Cry alert]] onset, a device going offline, a share received, a system message), so it is deliberately not tied to crying. Distinct from **Cry alert** (the *live, time-critical delivery* of a crying event) and **Cry episode** (the underlying event). The Notification Center lists these newest-first and tracks unread count.
 _Avoid_: alert (that is the live cry delivery), message (overloaded), feed item.
 
+**Position status**:
+The live safety surface for a baby's posture: a face-visibility indicator on the Live Monitor plus a prominent prone/occlusion banner. It reuses the **[[Cry alert]]** visual language (the Locked `--alert*` red, the StatusPill/banner, the Notification Center) rather than a new color — prone is the same class of safety event as a cry (see `docs/adr/0005`).
+_Avoid_: a separate "posture color" or design system; "pose".
+
 ### Realtime
 
 **Live-sync**:
@@ -95,5 +99,5 @@ _Avoid_: tenant URL, white-label URL
 The per-seller-themeable subset of the design tokens — `--primary*`, the hero gradient, logo, app name — applied as CSS-var overrides before first paint. Everything else is **Locked tokens**.
 
 **Locked tokens**:
-The design tokens that are identical across all sellers because they carry safety meaning or AA-contrast tuning: `--alert*` (cry red, used *only* for an active cry), `--calm*`, `--amber*`, and the domain accents `--sleep` / `--feed`. A seller can never recolor these.
+The design tokens that are identical across all sellers because they carry safety meaning or AA-contrast tuning: `--alert*` (the one safety red, used *only* for an **active safety event** — a [[Cry alert]] **or** a prone/occlusion position alert; see `docs/adr/0005`), `--calm*`, `--amber*`, and the domain accents `--sleep` / `--feed`. A seller can never recolor these.
 _Avoid_: theme colors (these are the ones that are *not* themeable)

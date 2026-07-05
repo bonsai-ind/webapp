@@ -23,6 +23,9 @@ export function MonitorView({
   audioRef,
   onHoldStart,
   onHoldEnd,
+  cameraUnavailable = false,
+  simulating = false,
+  onSimulate,
 }: {
   status: CallStatus;
   talkState: TalkState;
@@ -32,6 +35,11 @@ export function MonitorView({
   audioRef: RefObject<HTMLAudioElement | null>;
   onHoldStart: () => void;
   onHoldEnd: () => void;
+  // Simulate Camera (ADR 0010): shown when the device reports no physical camera.
+  // Does NOT auto-start — waits for the user to press.
+  cameraUnavailable?: boolean;
+  simulating?: boolean;
+  onSimulate?: () => void;
 }) {
   return (
     <div className="relative flex min-h-[60vh] flex-col overflow-hidden rounded-card bg-[#0B0C12] text-white">
@@ -46,12 +54,28 @@ export function MonitorView({
       {/* Audio sink — never muted, so baby/room audio plays on audio-only calls. */}
       <audio ref={audioRef} autoPlay className="hidden" />
 
-      {!hasVideo && (
-        <div className="absolute inset-0 flex items-center justify-center">
+      {cameraUnavailable ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
           <span className="font-mono text-[11px] uppercase tracking-[0.13em] text-white/55">
-            Audio only
+            No camera detected
           </span>
+          <button
+            type="button"
+            onClick={onSimulate}
+            disabled={simulating}
+            className="rounded-[14px] bg-primary px-5 py-3 font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
+          >
+            {simulating ? "Starting…" : "Simulate Camera"}
+          </button>
         </div>
+      ) : (
+        !hasVideo && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="font-mono text-[11px] uppercase tracking-[0.13em] text-white/55">
+              Audio only
+            </span>
+          </div>
+        )
       )}
 
       <div className="relative flex items-center gap-2 p-3">

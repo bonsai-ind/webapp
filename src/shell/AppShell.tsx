@@ -4,6 +4,7 @@ import type { Session } from "../session/session";
 import type { LiveSync } from "../realtime/live-sync";
 import { useCryStatus } from "../cries/useCryStatus";
 import { CryAlertOverlay } from "../cries/CryAlertOverlay";
+import { SafetyOverlay } from "../safety/SafetyOverlay";
 import { useUnreadCount } from "../notifications/useNotifications";
 import { NotificationsOverlay } from "../notifications/NotificationsOverlay";
 import { useBabies } from "../babies/useBabies";
@@ -183,6 +184,9 @@ export function AppShell({
       {liveSync && (
         <CryAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} onTalk={goToMonitor} />
       )}
+      {/* Position safety takeover (ADR 0005): reuses the cry alert language, lives
+          here so its Open action can reach navigation. */}
+      {liveSync && <SafetyOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
     </div>
   );
 }

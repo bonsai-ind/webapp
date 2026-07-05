@@ -104,3 +104,39 @@ describe("MonitorView", () => {
     expect(screen.getByText(/microphone unavailable/i)).toBeInTheDocument();
   });
 });
+
+describe("MonitorView — Simulate Camera", () => {
+  function renderCam(props: { cameraUnavailable?: boolean; onSimulate?: () => void; simulating?: boolean }) {
+    return render(
+      <MonitorView
+        videoRef={createRef<HTMLVideoElement>()}
+        audioRef={createRef<HTMLAudioElement>()}
+        status="connecting"
+        talkState="idle"
+        hasVideo={false}
+        micError={false}
+        onHoldStart={() => {}}
+        onHoldEnd={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  test("shows a Simulate Camera button when the camera is unavailable", () => {
+    renderCam({ cameraUnavailable: true });
+    expect(screen.getByRole("button", { name: /simulate camera/i })).toBeInTheDocument();
+  });
+
+  test("clicking Simulate Camera fires onSimulate (does not auto-start)", () => {
+    const onSimulate = vi.fn();
+    renderCam({ cameraUnavailable: true, onSimulate });
+    expect(onSimulate).not.toHaveBeenCalled(); // waits for the user
+    fireEvent.click(screen.getByRole("button", { name: /simulate camera/i }));
+    expect(onSimulate).toHaveBeenCalledTimes(1);
+  });
+
+  test("no Simulate button when the camera is available", () => {
+    renderCam({ cameraUnavailable: false });
+    expect(screen.queryByRole("button", { name: /simulate camera/i })).not.toBeInTheDocument();
+  });
+});
