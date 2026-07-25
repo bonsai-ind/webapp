@@ -156,8 +156,26 @@ export async function reportTemperatureAlert(ds: DeviceSession, report: Temperat
   await postJson(ds, "/device/temperature-alert", report);
 }
 
+export interface DistressAlertReport {
+  episodeId: string;
+  state: "alert" | "clear";
+  level: "fussing" | "stress" | "distress" | "emergency";
+  cues: string[];
+  confidence: number;
+  modelVersion: string;
+}
+
+// Open/close a device-detected behavioral-distress episode (the device owns the
+// posture + facial micro-expression fusion — see distress-rules.ts, the
+// firmware contract).
+export async function reportDistressAlert(ds: DeviceSession, report: DistressAlertReport): Promise<void> {
+  await postJson(ds, "/device/distress-alert", report);
+}
+
 // Device-initiated call (this project's one backend addition): ask the backend
 // to ring every member of this device. callId is the device-minted dedup key.
-export async function requestCall(ds: DeviceSession, callId: string): Promise<void> {
-  await postVoid(ds, "/device/call/request", { callId });
+// An optional reason marks an automatic escalation (e.g. "face may be covered")
+// so the viewer's ring can distinguish it from a manual call.
+export async function requestCall(ds: DeviceSession, callId: string, reason?: string): Promise<void> {
+  await postVoid(ds, "/device/call/request", reason ? { callId, reason } : { callId });
 }

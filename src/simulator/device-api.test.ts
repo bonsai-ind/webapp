@@ -9,6 +9,7 @@ import {
   reportCameraStatus,
   reportCry,
   reportFeeding,
+  reportDistressAlert,
   reportPosition,
   reportSleep,
   reportTemperature,
@@ -228,11 +229,41 @@ describe("simulator device API (firmware contract)", () => {
     });
   });
 
+  test("reportDistressAlert posts the distress episode shape", async () => {
+    const captured = capture("post", "/device/distress-alert", { episodeId: "dep_1", alerted: true });
+
+    await reportDistressAlert(ds(), {
+      episodeId: "dep_1",
+      state: "alert",
+      level: "distress",
+      cues: ["brow_bulge", "eye_squeeze", "legs_to_chest"],
+      confidence: 0.85,
+      modelVersion: "sim",
+    });
+
+    expect(captured.body).toEqual({
+      episodeId: "dep_1",
+      state: "alert",
+      level: "distress",
+      cues: ["brow_bulge", "eye_squeeze", "legs_to_chest"],
+      confidence: 0.85,
+      modelVersion: "sim",
+    });
+  });
+
   test("requestCall posts the device-minted callId", async () => {
     const captured = capture("post", "/device/call/request");
 
     await requestCall(ds(), "call_sim_1");
 
     expect(captured.body).toEqual({ callId: "call_sim_1" });
+  });
+
+  test("requestCall includes an auto-call reason when given", async () => {
+    const captured = capture("post", "/device/call/request");
+
+    await requestCall(ds(), "call_sim_2", "face may be covered");
+
+    expect(captured.body).toEqual({ callId: "call_sim_2", reason: "face may be covered" });
   });
 });

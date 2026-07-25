@@ -7,6 +7,7 @@ export interface CallRequest {
   deviceName: string;
   babyId?: string;
   babyName?: string;
+  reason?: string;
 }
 
 const RING_WINDOW_MS = 60_000;
@@ -50,9 +51,17 @@ export function IncomingCallOverlay({
     <div
       role="alertdialog"
       aria-label={`${ringing.deviceName} is calling`}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-primary to-primary-700 px-[18px] text-center text-white"
+      // Above the safety takeovers (z-50): an incoming call is always
+      // answerable, and an auto-call escalation (e.g. a face-covered distress
+      // emergency) rides in over its own red takeover — Accept must stay reachable.
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-primary to-primary-700 px-[18px] text-center text-white"
     >
       <h1 className="text-[31px] font-extrabold tracking-[-0.02em]">{ringing.deviceName} is calling</h1>
+      {ringing.reason && (
+        <p className="rounded-full bg-white/20 px-3 py-1 text-[12.5px] font-semibold">
+          Auto-call · {ringing.reason}
+        </p>
+      )}
       {ringing.babyName && (
         <span className="rounded-full bg-white/15 px-3 py-1 font-mono text-[12px]">{ringing.babyName}</span>
       )}

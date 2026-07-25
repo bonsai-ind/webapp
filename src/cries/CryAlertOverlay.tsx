@@ -7,7 +7,7 @@ import { CryAlert } from "./CryAlert";
 import { startAlertFeedback, type AlertFeedback } from "./alert-feedback";
 
 // Resources whose server-pushed frames refresh the Query cache (ADR-0004).
-const RESOURCES = ["babies", "summary", "cry-patterns", "growth", "temperature"];
+const RESOURCES = ["babies", "summary", "cry-patterns", "growth", "temperature", "distress"];
 
 const SNOOZE_MS = 5 * 60_000;
 

@@ -7,6 +7,7 @@ import { CryAlertOverlay } from "../cries/CryAlertOverlay";
 import { SafetyOverlay } from "../safety/SafetyOverlay";
 import { IncomingCallOverlay } from "../video/IncomingCallOverlay";
 import { TemperatureAlertOverlay } from "../temperature/TemperatureAlertOverlay";
+import { DistressAlertOverlay } from "../distress/DistressAlertOverlay";
 import { useUnreadCount } from "../notifications/useNotifications";
 import { NotificationsOverlay } from "../notifications/NotificationsOverlay";
 import { useBabies } from "../babies/useBabies";
@@ -18,6 +19,8 @@ import { GrowthScreen } from "../growth/GrowthScreen";
 import { MonitorScreen } from "../video/MonitorScreen";
 import { SleepScreen } from "../sleep/SleepScreen";
 import { FeedingScreen } from "../feeding/FeedingScreen";
+import { ParentHubScreen } from "../parent/ParentHubScreen";
+import { useEngagementFeed } from "../parent/learn/useEngagementFeed";
 import { AppHeader } from "./AppHeader";
 
 const NOOP_LIVE_SYNC: LiveSync = {
@@ -34,7 +37,7 @@ function greeting(): string {
   return "Good night";
 }
 
-const TABS = ["Today", "Monitor", "Cries", "Growth"] as const;
+const TABS = ["Today", "Monitor", "Cries", "Growth", "Care"] as const;
 type Tab = (typeof TABS)[number];
 type SubScreen = "sleep" | "feeding" | null;
 
@@ -59,6 +62,11 @@ export function AppShell({
   // Wire the header StatusPill to the live cry status (falls back to "calm"
   // when no liveSync is connected — e.g. in tests).
   const cryStatus = useCryStatus(liveSync ?? NOOP_LIVE_SYNC);
+
+  // Care-tab badge: count of unread "new this week" Learn cards for the active
+  // baby (shares the Query cache with the hub's Learn view).
+  const { data: engagement } = useEngagementFeed(session, activeBaby?.id);
+  const careBadge = engagement?.unreadNew ?? 0;
 
   // Bell badge (ADR 0014). The live `notification` event refreshes the badge +
   // history; refetch-on-focus (global) self-heals a missed event.
@@ -162,6 +170,7 @@ export function AppShell({
         )}
         {active === "Cries" && <CriesScreen session={session} babyId={activeBaby?.id} />}
         {active === "Growth" && <GrowthScreen session={session} babyId={activeBaby?.id} />}
+        {active === "Care" && <ParentHubScreen session={session} babyId={activeBaby?.id} />}
       </main>
 
       <nav
@@ -175,11 +184,17 @@ export function AppShell({
             id={`tab-${tab}`}
             aria-selected={tab === active}
             onClick={() => { setActive(tab); setSubscreen(null); }}
-            className={`flex-1 py-3 font-mono text-[9px] font-medium uppercase tracking-[0.1em] transition-colors ${
+            className={`relative flex-1 py-3 font-mono text-[9px] font-medium uppercase tracking-[0.1em] transition-colors ${
               tab === active ? "text-primary" : "text-ink-3"
             }`}
           >
             {tab}
+            {tab === "Care" && careBadge > 0 && (
+              <span
+                aria-label={`${careBadge} new`}
+                className="absolute right-[calc(50%-22px)] top-2 size-1.5 rounded-full bg-alert"
+              />
+            )}
           </button>
         ))}
       </nav>
@@ -206,6 +221,9 @@ export function AppShell({
       {/* Temperature anomalies: red takeover for danger kinds, amber banner for
           warnings; clears from the device's clear signal. */}
       {liveSync && <TemperatureAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
+      {/* Behavioral-distress: red takeover for distress/emergency (face-covered
+          also auto-calls), amber banner for stress; clears from the device. */}
+      {liveSync && <DistressAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
     </div>
   );
 }

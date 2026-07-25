@@ -9,6 +9,10 @@ export interface Baby {
   // marshals AvatarURL unconditionally); empty string means render the
   // gradient + first-initial fallback in <BabyAvatar />.
   avatarUrl: string;
+  // Optional date of birth (YYYY-MM-DD) + derived whole weeks since birth — the
+  // Parent hub's personalization clock (baby age + mother postpartum stage).
+  dateOfBirth?: string;
+  ageWeeks?: number;
 }
 
 export function useBabies(session: Session): { babies: Baby[]; isLoading: boolean } {

@@ -37,13 +37,16 @@ describe("AppShell", () => {
         HttpResponse.json({ sleep: "—", cryEpisodes: 0, feeds: 0 }),
       ),
       http.get(`${BASE}/me/orgs`, () => HttpResponse.json([])),
+      // The Care-tab badge reads the Learn feed — default it so tab/header tests
+      // don't hit an unhandled request.
+      http.get(`${BASE}/babies/:id/engagement`, () => HttpResponse.json({ items: [], unreadNew: 0 })),
     );
   });
 
-  test("renders the four tabs with Today active and its panel shown", () => {
+  test("renders the five tabs with Today active and its panel shown", () => {
     renderShell();
 
-    for (const label of ["Today", "Monitor", "Cries", "Growth"]) {
+    for (const label of ["Today", "Monitor", "Cries", "Growth", "Care"]) {
       expect(screen.getByRole("tab", { name: label })).toBeInTheDocument();
     }
 

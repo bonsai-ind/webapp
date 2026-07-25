@@ -36,7 +36,10 @@ const liveSync = createLiveSync({
   dedupeKey: (event) => {
     const d = event.data as { episodeId?: string; state?: string; callId?: string } | null;
     if (
-      (event.type === "cry-status" || event.type === "safety-status" || event.type === "temperature-status") &&
+      (event.type === "cry-status" ||
+        event.type === "safety-status" ||
+        event.type === "temperature-status" ||
+        event.type === "distress-status") &&
       d?.episodeId &&
       d?.state
     ) {

@@ -6,6 +6,7 @@ import { EnablePushCard } from "../push/EnablePushCard";
 import { ListeningCard } from "./ListeningCard";
 import { useTodaySummary } from "./useTodaySummary";
 import { TemperatureCard } from "../temperature/TemperatureCard";
+import { DistressCard } from "../distress/DistressCard";
 
 const NOOP_LIVE_SYNC: LiveSync = {
   start() {},
@@ -43,6 +44,9 @@ export function TodayScreen({
 
       {/* Nursery climate (temperature data plane) — renders once a sensor reports. */}
       <TemperatureCard session={session} babyId={babyId} />
+
+      {/* Behavioral distress (posture + expression) — renders once the device flags something. */}
+      <DistressCard session={session} babyId={babyId} />
 
       <div className="grid grid-cols-3 gap-3">
         {onOpenSleep ? (

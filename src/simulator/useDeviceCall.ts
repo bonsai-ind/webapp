@@ -164,11 +164,15 @@ export function useDeviceCall({
   const hangUp = useCallback(() => dispatch("hangup"), [dispatch]);
 
   // Device-initiated call: ring every member of this device, then join the
-  // room and wait for a viewer to accept and offer.
-  const callCaregiver = useCallback(async () => {
-    await requestCall(deviceSession, `call_sim_${crypto.randomUUID()}`);
-    dispatch("start");
-  }, [deviceSession, dispatch]);
+  // room and wait for a viewer to accept and offer. An optional reason marks an
+  // automatic escalation (e.g. a face-covered distress emergency auto-ringing).
+  const callCaregiver = useCallback(
+    async (reason?: string) => {
+      await requestCall(deviceSession, `call_sim_${crypto.randomUUID()}`, reason);
+      dispatch("start");
+    },
+    [deviceSession, dispatch],
+  );
 
   // Teardown on unmount only.
   useEffect(() => teardown, [teardown]);

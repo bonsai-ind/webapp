@@ -8,6 +8,7 @@ import { DeviceStatusCard } from "./DeviceStatusCard";
 import { BabyPairPanel } from "./BabyPairPanel";
 import { CryPanel } from "./CryPanel";
 import { PositionPanel } from "./PositionPanel";
+import { DistressPanel } from "./DistressPanel";
 import { SleepPanel } from "./SleepPanel";
 import { TemperaturePanel } from "./TemperaturePanel";
 import { FeedingPanel } from "./FeedingPanel";
@@ -61,6 +62,11 @@ export function SimulatorConsole({
         <BabyPairPanel session={session} pairedBabyId={state.babyId} onPair={onPairBaby} />
         <CryPanel deviceSession={deviceSession} />
         <PositionPanel deviceSession={deviceSession} />
+        <DistressPanel
+          deviceSession={deviceSession}
+          enabled={state.phase === "active"}
+          onAutoCall={(reason) => void call.callCaregiver(reason)}
+        />
         <TemperaturePanel deviceSession={deviceSession} enabled={state.phase === "active"} />
       </div>
       <div className="flex flex-col gap-4">
