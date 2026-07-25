@@ -34,7 +34,7 @@ const liveSync = createLiveSync({
   // Replay guard (ADR-0004): a Last-Event-ID replay after reconnect must not
   // re-fire a safety alert or re-ring a call the user already saw.
   dedupeKey: (event) => {
-    const d = event.data as { episodeId?: string; state?: string; callId?: string } | null;
+    const d = event.data as { episodeId?: string; state?: string; callId?: string; sosId?: string } | null;
     if (
       (event.type === "cry-status" ||
         event.type === "safety-status" ||
@@ -46,6 +46,7 @@ const liveSync = createLiveSync({
       return `${event.type}:${d.episodeId}:${d.state}`;
     }
     if (event.type === "call-request" && d?.callId) return `call-request:${d.callId}`;
+    if (event.type === "emergency" && d?.sosId) return `emergency:${d.sosId}`;
     return undefined; // cache frames may repeat freely
   },
   onAuthError: async () => {

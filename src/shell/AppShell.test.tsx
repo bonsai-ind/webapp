@@ -40,7 +40,19 @@ describe("AppShell", () => {
       // The Care-tab badge reads the Learn feed — default it so tab/header tests
       // don't hit an unhandled request.
       http.get(`${BASE}/babies/:id/engagement`, () => HttpResponse.json({ items: [], unreadNew: 0 })),
+      http.get(`${BASE}/emergency/providers`, () => HttpResponse.json({ providers: [] })),
     );
+  });
+
+  test("the SOS button is always present and opens the Emergency screen", async () => {
+    renderShell();
+
+    const sos = screen.getByRole("button", { name: /emergency sos/i });
+    expect(sos).toBeInTheDocument();
+    await userEvent.click(sos);
+
+    expect(screen.getByRole("dialog", { name: /emergency/i })).toBeInTheDocument();
+    expect(screen.getByText(/not a substitute for emergency services/i)).toBeInTheDocument();
   });
 
   test("renders the five tabs with Today active and its panel shown", () => {

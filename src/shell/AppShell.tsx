@@ -21,6 +21,9 @@ import { SleepScreen } from "../sleep/SleepScreen";
 import { FeedingScreen } from "../feeding/FeedingScreen";
 import { ParentHubScreen } from "../parent/ParentHubScreen";
 import { useEngagementFeed } from "../parent/learn/useEngagementFeed";
+import { SosButton } from "../emergency/SosButton";
+import { EmergencyScreen } from "../emergency/EmergencyScreen";
+import { EmergencySosOverlay } from "../emergency/EmergencySosOverlay";
 import { AppHeader } from "./AppHeader";
 
 const NOOP_LIVE_SYNC: LiveSync = {
@@ -53,6 +56,7 @@ export function AppShell({
   const [active, setActive] = useState<Tab>("Today");
   const [subscreen, setSubscreen] = useState<SubScreen>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const { babies } = useBabies(session);
   const { orgs } = useOrgs(session);
@@ -85,6 +89,10 @@ export function AppShell({
     const onMessage = (e: MessageEvent) => {
       const msg = e.data as { kind?: string; babyId?: string } | null;
       if (msg?.kind === "open-monitor") goToMonitor(msg.babyId);
+      else if (msg?.kind === "open-emergency") {
+        if (msg.babyId) setSelectedBabyId(msg.babyId);
+        setSosOpen(true);
+      }
     };
     navigator.serviceWorker.addEventListener("message", onMessage);
     return () => navigator.serviceWorker.removeEventListener("message", onMessage);
@@ -110,6 +118,9 @@ export function AppShell({
       setSubscreen(null);
     } else if (a?.kind === "open-monitor") {
       goToMonitor(a.babyId);
+    } else if (a?.kind === "open-emergency") {
+      if (a.babyId) setSelectedBabyId(a.babyId);
+      setSosOpen(true);
     }
   };
 
@@ -173,6 +184,9 @@ export function AppShell({
         {active === "Care" && <ParentHubScreen session={session} babyId={activeBaby?.id} />}
       </main>
 
+      {/* Persistent SOS button — one tap to the Emergency screen from anywhere. */}
+      <SosButton onClick={() => setSosOpen(true)} />
+
       <nav
         role="tablist"
         className="sticky bottom-0 flex border-t border-line bg-white/[0.86] pb-[env(safe-area-inset-bottom)] backdrop-blur-[18px] backdrop-saturate-150"
@@ -224,6 +238,11 @@ export function AppShell({
       {/* Behavioral-distress: red takeover for distress/emergency (face-covered
           also auto-calls), amber banner for stress; clears from the device. */}
       {liveSync && <DistressAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
+      {/* Family SOS alert: a caregiver raised the emergency SOS. */}
+      {liveSync && <EmergencySosOverlay liveSync={liveSync} onOpen={() => setSosOpen(true)} />}
+
+      {/* The Emergency (SOS) screen — top of the overlay stack. */}
+      {sosOpen && <EmergencyScreen session={session} baby={activeBaby} onClose={() => setSosOpen(false)} />}
     </div>
   );
 }

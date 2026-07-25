@@ -28,14 +28,17 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const babyId = event.notification.data && event.notification.data.babyId;
+  const data = event.notification.data || {};
+  const babyId = data.babyId;
+  // Steer the deep-link by the push's kind (e.g. "open-emergency"); default to
+  // the crying baby's Live Monitor.
+  const kind = data.kind || "open-monitor";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const open = clients.find((c) => "focus" in c);
       if (open) {
-        // Deep-link: the app shell listens for this and opens the crying
-        // baby's Live Monitor.
-        if (babyId) open.postMessage({ kind: "open-monitor", babyId });
+        // Deep-link: the app shell listens for this and navigates accordingly.
+        open.postMessage({ kind, babyId });
         return open.focus();
       }
       return self.clients.openWindow("/");
