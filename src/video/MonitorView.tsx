@@ -26,6 +26,10 @@ export function MonitorView({
   cameraUnavailable = false,
   simulating = false,
   onSimulate,
+  selfVideoRef,
+  cameraOn = false,
+  cameraError = false,
+  onToggleCamera,
 }: {
   status: CallStatus;
   talkState: TalkState;
@@ -40,6 +44,11 @@ export function MonitorView({
   cameraUnavailable?: boolean;
   simulating?: boolean;
   onSimulate?: () => void;
+  // Two-way video: the parent's own camera preview + on/off toggle.
+  selfVideoRef?: RefObject<HTMLVideoElement | null>;
+  cameraOn?: boolean;
+  cameraError?: boolean;
+  onToggleCamera?: () => void;
 }) {
   return (
     <div className="relative flex min-h-[60vh] flex-col overflow-hidden rounded-card bg-[#0B0C12] text-white">
@@ -93,13 +102,34 @@ export function MonitorView({
         </span>
       </div>
 
+      {/* Self-preview PiP (two-way video): what the baby sees. Kept mounted so
+          the ref exists before the camera track attaches; hidden while off. */}
+      {selfVideoRef && (
+        <video
+          ref={selfVideoRef}
+          autoPlay
+          playsInline
+          muted
+          data-testid="self-preview"
+          className={`absolute right-3 top-3 z-10 aspect-video w-28 rounded-[10px] border border-white/25 bg-black/60 object-cover ${
+            cameraOn ? "" : "hidden"
+          }`}
+        />
+      )}
+
+      {cameraError && (
+        <div className="relative mx-4 rounded-card bg-alert/20 px-3 py-2 text-[12px] text-white">
+          Camera unavailable — check permissions.
+        </div>
+      )}
+
       {micError && (
         <div className="relative mx-4 rounded-card bg-alert/20 px-3 py-2 text-[12px] text-white">
           Microphone unavailable — check permissions.
         </div>
       )}
 
-      <div className="relative mt-auto flex justify-center p-4">
+      <div className="relative mt-auto flex items-center justify-center gap-3 p-4">
         <button
           type="button"
           onPointerDown={onHoldStart}
@@ -109,6 +139,16 @@ export function MonitorView({
         >
           {TALK_LABEL[talkState]}
         </button>
+        {onToggleCamera && (
+          <button
+            type="button"
+            onClick={onToggleCamera}
+            aria-pressed={cameraOn}
+            className="rounded-full border border-white/30 bg-white/10 px-4 py-3 text-[13px] font-semibold text-white backdrop-blur"
+          >
+            {cameraOn ? "Camera off" : "Camera on"}
+          </button>
+        )}
       </div>
     </div>
   );

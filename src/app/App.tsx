@@ -7,17 +7,20 @@ import { BrandProvider } from "../brand/BrandProvider";
 import { AuthGate } from "../auth/AuthGate";
 import { AcceptInviteScreen } from "../auth/AcceptInviteScreen";
 import { AppShell } from "../shell/AppShell";
+import { SimulatorApp } from "../simulator/SimulatorApp";
 
 export function App({
   session,
   baseUrl,
   inviteToken,
   liveSync,
+  simulatorMode = false,
 }: {
   session: Session;
   baseUrl: string;
   inviteToken?: string;
   liveSync?: LiveSync;
+  simulatorMode?: boolean;
 }) {
   const [onboarding, setOnboarding] = useState(inviteToken !== undefined);
   const [queryClient] = useState(
@@ -27,7 +30,14 @@ export function App({
   return (
     <QueryClientProvider client={queryClient}>
       <BrandProvider baseUrl={baseUrl}>
-        {onboarding && inviteToken ? (
+        {simulatorMode ? (
+          // Standalone Device Simulator (?simulator=1). AuthGate provides the
+          // user login the claim/pair steps need; everything else on the page
+          // runs on its own device-token session.
+          <AuthGate session={session}>
+            <SimulatorApp session={session} baseUrl={baseUrl} />
+          </AuthGate>
+        ) : onboarding && inviteToken ? (
           <AcceptInviteScreen
             session={session}
             token={inviteToken}

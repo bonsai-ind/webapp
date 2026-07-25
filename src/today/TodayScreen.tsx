@@ -5,6 +5,7 @@ import { StatTile } from "../ui/StatTile";
 import { EnablePushCard } from "../push/EnablePushCard";
 import { ListeningCard } from "./ListeningCard";
 import { useTodaySummary } from "./useTodaySummary";
+import { TemperatureCard } from "../temperature/TemperatureCard";
 
 const NOOP_LIVE_SYNC: LiveSync = {
   start() {},
@@ -39,6 +40,9 @@ export function TodayScreen({
       <ListeningCard status={cryStatus} onOpenMonitor={onOpenMonitor ?? (() => {})} />
 
       {shouldPromptPush() && <EnablePushCard session={session} />}
+
+      {/* Nursery climate (temperature data plane) — renders once a sensor reports. */}
+      <TemperatureCard session={session} babyId={babyId} />
 
       <div className="grid grid-cols-3 gap-3">
         {onOpenSleep ? (

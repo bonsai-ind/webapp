@@ -6,6 +6,9 @@ export interface Device {
   name: string;
   babyId: string | null;
   createdAt: string;
+  // Heartbeat-derived online/offline (ADR 0012) — used to prefer the live box
+  // when more than one device is paired to the same baby.
+  liveness?: "online" | "offline";
   // Device-reported physical-camera presence (ADR 0010); false → offer Simulate Camera.
   cameraAvailable?: boolean;
 }
@@ -28,6 +31,8 @@ interface DeviceDto {
   name: string;
   baby_id: string | null;
   created_at: string;
+  liveness?: "online" | "offline";
+  cameraAvailable?: boolean;
 }
 
 const toDevice = (d: DeviceDto): Device => ({
@@ -35,10 +40,30 @@ const toDevice = (d: DeviceDto): Device => ({
   name: d.name,
   babyId: d.baby_id,
   createdAt: d.created_at,
+  liveness: d.liveness,
+  cameraAvailable: d.cameraAvailable,
 });
 
-export async function claimDevice(session: Session, name: string): Promise<Device> {
-  return toDevice(await postJson<DeviceDto>(session, "/devices", { name }));
+export interface ClaimedDevice {
+  device: Device;
+  // The freshly-minted device credential pair (ADR 0010) — returned once, to
+  // the claiming client. The simulator adopts these to authenticate as the box.
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Redeem the Pairing Code shown on the device screen (ADR 0010): attaches the
+// caller as Primary, activates the device, and returns its token pair.
+export async function claimDevice(
+  session: Session,
+  { pairingCode, name }: { pairingCode: string; name: string },
+): Promise<ClaimedDevice> {
+  const dto = await postJson<DeviceDto & { access_token: string; refresh_token: string }>(
+    session,
+    "/devices",
+    { pairing_code: pairingCode, name },
+  );
+  return { device: toDevice(dto), accessToken: dto.access_token, refreshToken: dto.refresh_token };
 }
 
 export async function getDevice(session: Session, id: string): Promise<Device> {

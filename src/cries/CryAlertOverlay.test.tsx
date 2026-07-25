@@ -16,33 +16,48 @@ function fakeFactory() {
   return { factory, emit: (e: StreamEvent) => emit(e) };
 }
 
-describe("CryAlertOverlay", () => {
-  test("shows the full-screen alert on a crying event and hides it on calm", () => {
-    const fake = fakeFactory();
-    const liveSync = createLiveSync({ url: "u", getToken: () => "t", factory: fake.factory });
+function setup(props: { onOpenMonitor?: (babyId?: string) => void } = {}) {
+  const fake = fakeFactory();
+  const liveSync = createLiveSync({ url: "u", getToken: () => "t", factory: fake.factory });
+  renderWithQuery(<CryAlertOverlay liveSync={liveSync} {...props} />);
+  act(() => liveSync.start());
+  return fake;
+}
 
-    renderWithQuery(<CryAlertOverlay liveSync={liveSync} />);
-    act(() => liveSync.start());
+describe("CryAlertOverlay", () => {
+  test("shows the full-screen alert on a crying event and hides it on the episode's calm", () => {
+    const fake = setup();
 
     expect(screen.queryByText(/is crying/i)).not.toBeInTheDocument();
 
     act(() => fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-1", babyName: "Mia" } }));
     expect(screen.getByText(/mia is crying/i)).toBeInTheDocument();
+    expect(screen.getByText(/started \d+s ago/i)).toBeInTheDocument();
 
-    act(() => fake.emit({ type: "cry-status", data: { state: "calm" } }));
+    act(() => fake.emit({ type: "cry-status", data: { state: "calm", episodeId: "ep-1" } }));
     expect(screen.queryByText(/is crying/i)).not.toBeInTheDocument();
   });
 
-  test("Open and Talk navigate with the episode's babyId, then dismiss the takeover", async () => {
-    const fake = fakeFactory();
-    const liveSync = createLiveSync({ url: "u", getToken: () => "t", factory: fake.factory });
-    const onOpenMonitor = vi.fn();
-    const onTalk = vi.fn();
+  test("a calm for a DIFFERENT baby keeps the alert up (twins)", () => {
+    const fake = setup();
 
-    renderWithQuery(
-      <CryAlertOverlay liveSync={liveSync} onOpenMonitor={onOpenMonitor} onTalk={onTalk} />,
+    act(() =>
+      fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-a", babyId: "bby_a", babyName: "Mia" } }),
     );
-    act(() => liveSync.start());
+    act(() =>
+      fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-b", babyId: "bby_b", babyName: "Noah" } }),
+    );
+    expect(screen.getByText(/noah is crying/i)).toBeInTheDocument();
+
+    act(() => fake.emit({ type: "cry-status", data: { state: "calm", episodeId: "ep-b", babyId: "bby_b" } }));
+    // Mia's ongoing episode takes the takeover back over.
+    expect(screen.getByText(/mia is crying/i)).toBeInTheDocument();
+  });
+
+  test("Open navigates with the episode's babyId, then dismisses the takeover", async () => {
+    const onOpenMonitor = vi.fn();
+    const fake = setup({ onOpenMonitor });
+
     act(() =>
       fake.emit({
         type: "cry-status",
@@ -52,25 +67,45 @@ describe("CryAlertOverlay", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /open live monitor/i }));
     expect(onOpenMonitor).toHaveBeenCalledWith("bby_42");
-    // Open dismisses the takeover.
     expect(screen.queryByText(/mia is crying/i)).not.toBeInTheDocument();
   });
 
-  test("Talk navigates with the episode's babyId", async () => {
-    const fake = fakeFactory();
-    const liveSync = createLiveSync({ url: "u", getToken: () => "t", factory: fake.factory });
-    const onTalk = vi.fn();
+  test("Snooze hides the takeover; a NEW episode still shows through it", async () => {
+    const fake = setup();
+    act(() => fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-1", babyName: "Mia" } }));
 
-    renderWithQuery(<CryAlertOverlay liveSync={liveSync} onTalk={onTalk} />);
-    act(() => liveSync.start());
-    act(() =>
-      fake.emit({
-        type: "cry-status",
-        data: { state: "crying", episodeId: "ep-2", babyId: "bby_7", babyName: "Mia" },
-      }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /snooze 5 min/i }));
+    expect(screen.queryByText(/mia is crying/i)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /^talk$/i }));
-    expect(onTalk).toHaveBeenCalledWith("bby_7");
+    // A NEW episode shows immediately despite the snooze on the old one.
+    act(() => fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-2", babyName: "Mia" } }));
+    expect(screen.getByText(/mia is crying/i)).toBeInTheDocument();
+  });
+
+  test("the snooze lapses and the still-active episode re-nags", () => {
+    vi.useFakeTimers();
+    try {
+      const fake = setup();
+      act(() => fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-1", babyName: "Mia" } }));
+
+      // Snooze via fireEvent-style direct click (userEvent hangs under fake timers).
+      act(() => {
+        screen.getByRole("button", { name: /snooze 5 min/i }).click();
+      });
+      expect(screen.queryByText(/mia is crying/i)).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(5 * 60_000 + 200);
+      });
+      expect(screen.getByText(/mia is crying/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("there is no Talk button (Open is the single action)", () => {
+    const fake = setup();
+    act(() => fake.emit({ type: "cry-status", data: { state: "crying", episodeId: "ep-1", babyName: "Mia" } }));
+    expect(screen.queryByRole("button", { name: /^talk$/i })).not.toBeInTheDocument();
   });
 });

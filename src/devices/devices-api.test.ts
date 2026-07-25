@@ -9,7 +9,7 @@ const session = () => createSession({ baseUrl: BASE });
 
 // Shapes mirror the real backend (verified against :8080).
 describe("devices API", () => {
-  test("claimDevice posts the name and returns the camelCased device", async () => {
+  test("claimDevice redeems the pairing code and returns the device + its token pair", async () => {
     let body: unknown;
     server.use(
       http.post(`${BASE}/devices`, async ({ request }) => {
@@ -19,18 +19,24 @@ describe("devices API", () => {
           name: "Nursery Cam",
           baby_id: null,
           created_at: "2026-06-13T19:00:00Z",
+          access_token: "dev-acc",
+          refresh_token: "dev-ref",
         });
       }),
     );
 
-    const device = await claimDevice(session(), "Nursery Cam");
+    const claimed = await claimDevice(session(), { pairingCode: "ABCD2345", name: "Nursery Cam" });
 
-    expect(body).toEqual({ name: "Nursery Cam" });
-    expect(device).toEqual({
-      id: "dev_1",
-      name: "Nursery Cam",
-      babyId: null,
-      createdAt: "2026-06-13T19:00:00Z",
+    expect(body).toEqual({ pairing_code: "ABCD2345", name: "Nursery Cam" });
+    expect(claimed).toEqual({
+      device: {
+        id: "dev_1",
+        name: "Nursery Cam",
+        babyId: null,
+        createdAt: "2026-06-13T19:00:00Z",
+      },
+      accessToken: "dev-acc",
+      refreshToken: "dev-ref",
     });
   });
 

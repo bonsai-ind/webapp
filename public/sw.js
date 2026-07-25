@@ -8,23 +8,37 @@
 
 self.addEventListener("push", (event) => {
   const payload = event.data ? event.data.json() : {};
-  const title = `${payload.babyName || "Your baby"} is crying`;
-  const body = payload.cause ? `Likely cause: ${payload.cause}` : "Tap to open the live monitor.";
+  // Non-cry alerts (e.g. temperature) carry their own title/body; the cry
+  // rendering below stays the default.
+  const title = payload.title || `${payload.babyName || "Your baby"} is crying`;
+  const body = payload.body || (payload.cause ? `Likely cause: ${payload.cause}` : "Tap to open the live monitor.");
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       tag: payload.episodeId,
       data: payload,
+      // A cry is time-critical (DESIGN.md): buzz, don't auto-dismiss, and
+      // re-alert if the same tag is replaced by a newer frame.
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
+      renotify: true,
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const babyId = event.notification.data && event.notification.data.babyId;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const open = clients.find((c) => "focus" in c);
-      return open ? open.focus() : self.clients.openWindow("/");
+      if (open) {
+        // Deep-link: the app shell listens for this and opens the crying
+        // baby's Live Monitor.
+        if (babyId) open.postMessage({ kind: "open-monitor", babyId });
+        return open.focus();
+      }
+      return self.clients.openWindow("/");
     }),
   );
 });

@@ -2,7 +2,13 @@ export type Signal =
   | { kind: "ready" }
   | { kind: "offer"; sdp: unknown }
   | { kind: "answer"; sdp: unknown }
-  | { kind: "ice"; candidate: unknown };
+  | { kind: "ice"; candidate: unknown }
+  // Camera-state announcements (two-way video): the viewer tells the device it
+  // started/stopped sending video. Needed because a sender-side
+  // replaceTrack(null) stops RTP without reliably firing mute on the remote
+  // track. Payload-less, relayed generically; startCall itself ignores them.
+  | { kind: "camera-on" }
+  | { kind: "camera-off" };
 
 export interface SignalingChannel {
   send(signal: Signal): void;

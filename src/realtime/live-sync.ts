@@ -11,6 +11,11 @@ export interface StreamFactory {
     lastEventId?: string;
     onEvent: (e: StreamEvent) => void;
     onError: (code?: number) => void;
+    // Fired once the stream is established server-side (headers received). Call
+    // signaling relies on this ordering guarantee: the relay hub does not buffer,
+    // so a peer must not announce itself (`ready`) or wake the other peer until
+    // its own down-stream is actually joined.
+    onOpen?: () => void;
   }): StreamHandle;
 }
 

@@ -19,6 +19,11 @@ if ("serviceWorker" in navigator) {
 
 const session = createSession({ baseUrl });
 
+// ?simulator=1 turns this page into the standalone Device Simulator: the page
+// acts as a device (its own device-token session), so the user-scoped
+// Live-sync stream is not started — a device is not a caregiver client.
+const simulatorMode = new URLSearchParams(window.location.search).has("simulator");
+
 // The user-scoped Live-sync stream (cry alerts + cache updates). Connects only
 // while authenticated — start on auth, stop on logout; the bearer is pulled fresh
 // on every (re)connect.
@@ -26,6 +31,20 @@ const liveSync = createLiveSync({
   url: `${baseUrl}/live`,
   getToken: () => session.getAccessToken() ?? "",
   factory: createFetchStreamFactory(),
+  // Replay guard (ADR-0004): a Last-Event-ID replay after reconnect must not
+  // re-fire a safety alert or re-ring a call the user already saw.
+  dedupeKey: (event) => {
+    const d = event.data as { episodeId?: string; state?: string; callId?: string } | null;
+    if (
+      (event.type === "cry-status" || event.type === "safety-status" || event.type === "temperature-status") &&
+      d?.episodeId &&
+      d?.state
+    ) {
+      return `${event.type}:${d.episodeId}:${d.state}`;
+    }
+    if (event.type === "call-request" && d?.callId) return `call-request:${d.callId}`;
+    return undefined; // cache frames may repeat freely
+  },
   onAuthError: async () => {
     try {
       await session.refreshToken()
@@ -35,9 +54,11 @@ const liveSync = createLiveSync({
     }
   },
 });
-session.onAuthChange((state) =>
-  state.status === "authenticated" ? liveSync.start() : liveSync.stop(),
-);
+if (!simulatorMode) {
+  session.onAuthChange((state) =>
+    state.status === "authenticated" ? liveSync.start() : liveSync.stop(),
+  );
+}
 
 // A `revoked` control event means the server has revoked this session mid-stream
 // (token family revoked, or the user was removed from the device). Log out
@@ -53,7 +74,13 @@ const inviteToken = new URLSearchParams(window.location.search).get("token") ?? 
 session.restore().finally(() => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <App session={session} baseUrl={baseUrl} inviteToken={inviteToken} liveSync={liveSync} />
+      <App
+        session={session}
+        baseUrl={baseUrl}
+        inviteToken={inviteToken}
+        liveSync={liveSync}
+        simulatorMode={simulatorMode}
+      />
     </StrictMode>,
   );
 });

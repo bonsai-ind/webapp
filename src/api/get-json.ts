@@ -1,5 +1,9 @@
 import type { Session } from "../session/session";
 
+// The slice of Session these helpers need — structural, so the simulator's
+// device session (device-token auth) drops in alongside the user session.
+export type ApiClient = Pick<Session, "authedFetch">;
+
 // Carries the HTTP status so callers/UI can branch (e.g. 404 vs 500) instead of
 // crashing on a non-JSON error body.
 export class ApiError extends Error {
@@ -12,14 +16,14 @@ export class ApiError extends Error {
 // Authenticated GET → parsed JSON, or a typed ApiError on any non-2xx. Centralises
 // response handling for the data hooks so a text error body (e.g. the backend's
 // "404 page not found") never reaches JSON.parse.
-export async function getJson<T>(session: Session, path: string): Promise<T> {
+export async function getJson<T>(session: ApiClient, path: string): Promise<T> {
   const res = await session.authedFetch(path);
   if (!res.ok) throw new ApiError(res.status);
   return res.json();
 }
 
 // Authenticated POST with a JSON body → parsed JSON, or a typed ApiError on non-2xx.
-export async function postJson<T>(session: Session, path: string, body: unknown): Promise<T> {
+export async function postJson<T>(session: ApiClient, path: string, body: unknown): Promise<T> {
   const res = await session.authedFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -32,13 +36,13 @@ export async function postJson<T>(session: Session, path: string, body: unknown)
 const MAX_RETRIES = 2;
 
 // Authenticated DELETE → 204 No Content, or a typed ApiError on non-2xx.
-export async function deleteJson(session: Session, path: string): Promise<void> {
+export async function deleteJson(session: ApiClient, path: string): Promise<void> {
   const res = await session.authedFetch(path, { method: "DELETE" });
   if (!res.ok) throw new ApiError(res.status);
 }
 
 // Authenticated POST with a JSON body → 204 No Content, or a typed ApiError on non-2xx.
-export async function postVoid(session: Session, path: string, body?: unknown): Promise<void> {
+export async function postVoid(session: ApiClient, path: string, body?: unknown): Promise<void> {
   const res = await session.authedFetch(path, {
     method: "POST",
     ...(body !== undefined && {

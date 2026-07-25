@@ -18,9 +18,15 @@ function toEvent(data: CryStatusData): CryStatusEvent {
       babyId: data.babyId,
       babyName: data.babyName ?? "Your baby",
       cause: data.cause,
+      at: Date.now(),
     };
   }
-  return { kind: data.state };
+  if (data.state === "calm") {
+    // The backend's calm frame names its episode/baby so only THAT alert
+    // clears — a twin's ongoing cry must survive.
+    return { kind: "calm", episodeId: data.episodeId, babyId: data.babyId };
+  }
+  return { kind: "fussing" };
 }
 
 // Applies the cry-status state machine to the `cry-status` events on the

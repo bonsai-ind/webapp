@@ -7,7 +7,7 @@ import type { StreamFactory } from "./live-sync";
 // connection as onError and does not retry on its own.
 export function createFetchStreamFactory(): StreamFactory {
   return {
-    open({ url, token, lastEventId, onEvent, onError }) {
+    open({ url, token, lastEventId, onEvent, onError, onOpen }) {
       const controller = new AbortController();
 
       fetchEventSource(url, {
@@ -26,6 +26,7 @@ export function createFetchStreamFactory(): StreamFactory {
             onError();
             throw new Error(`stream open failed: ${response.status}`);
           }
+          onOpen?.();
         },
         onmessage(ev) {
           onEvent({

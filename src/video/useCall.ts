@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "../session/session";
-import { startCall, type Call, type PeerConnection } from "./start-call";
+import { startCall, type Call, type PeerConnection, type SignalingChannel } from "./start-call";
 import { createSignalingChannel } from "./signaling";
 import { fetchTurnConfig } from "./turn";
 import { wakeDevice } from "../devices/devices-api";
@@ -37,13 +37,30 @@ export function useCall({
   const [talkState, setTalkState] = useState<TalkState>("idle");
   const [hasVideo, setHasVideo] = useState(false);
   const [micError, setMicError] = useState(false);
+  // Two-way video: the parent's camera streams to the device (auto-on when the
+  // call starts, toggleable). cameraOn is the *intent*; the track follows it.
+  const [cameraOn, setCameraOn] = useState(true);
+  const [cameraError, setCameraError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const selfVideoRef = useRef<HTMLVideoElement>(null);
 
   // The pre-created audio sender we swap the live mic track into for PTT.
   const senderRef = useRef<RTCRtpSender | null>(null);
   // The currently-held mic track, if any (so cleanup can stop it).
   const heldTrackRef = useRef<MediaStreamTrack | null>(null);
+  // The video sender we swap the parent's camera track into (two-way video).
+  const videoSenderRef = useRef<RTCRtpSender | null>(null);
+  // The live camera track, if on (so toggle-off/cleanup can stop it).
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+  // Monotonic camera sequence — same latch as holdSeqRef: a toggle-off (or
+  // teardown) that lands before getUserMedia resolves invalidates the resolving
+  // track so the camera light never sticks on.
+  const cameraSeqRef = useRef(0);
+  // The live signaling channel, kept so camera toggles can announce themselves
+  // (camera-on/off frames) — replaceTrack(null) alone doesn't reliably mute the
+  // remote track, so the device is told explicitly.
+  const signalingRef = useRef<SignalingChannel | null>(null);
   // Monotonic hold sequence: each holdStart bumps it. A getUserMedia result is
   // only attached if its sequence still matches the latest hold — a release
   // (which bumps via holdEnd writing the "released" view) invalidates it.
@@ -65,9 +82,16 @@ export function useCall({
       pc = new RTCPeerConnection(config);
       // Pre-create the transceivers up front so the offer is complete before the
       // device is woken: a sendrecv audio line we push the mic into for PTT, and
-      // a recv-only video line for the monitor feed (caregiver sends no video).
+      // a sendrecv video line — down for the monitor feed, up for the parent's
+      // camera (two-way video). Tracks attach later via replaceTrack, which
+      // needs no renegotiation because the m-lines already exist in the offer.
       senderRef.current = pc.addTransceiver("audio", { direction: "sendrecv" }).sender;
-      pc.addTransceiver("video", { direction: "recvonly" });
+      videoSenderRef.current = pc.addTransceiver("video", { direction: "sendrecv" }).sender;
+
+      // Auto-start the parent camera (user-confirmed default). Async and
+      // non-blocking: the offer must not wait on the permission prompt, and a
+      // denied camera degrades to the old one-way call.
+      acquireCamera();
 
       pc.ontrack = (e) => {
         // Safe-mode: always route incoming media to the (non-muted) audio sink so
@@ -86,11 +110,23 @@ export function useCall({
       };
 
       // Subscribe + arm the caller BEFORE waking the device, so a fast `ready`
-      // frame (device already awake) isn't dropped before we're listening.
-      const signaling = createSignalingChannel({ session, baseUrl, deviceId });
+      // frame (device already awake) isn't dropped before we're listening. The
+      // wake itself waits for the down-stream to actually open (the relay hub
+      // doesn't buffer): waking earlier can land the device's `ready` in an
+      // empty room and deadlock the handshake.
+      const signaling = createSignalingChannel({
+        session,
+        baseUrl,
+        deviceId,
+        onOpen: () => {
+          if (cancelledRef.current) return;
+          wakeDevice(session, deviceId).catch(() => {
+            if (!cancelledRef.current) setStatus("ended");
+          });
+        },
+      });
+      signalingRef.current = signaling;
       call = startCall({ pc: pc as unknown as PeerConnection, signaling, role: "caller" });
-
-      await wakeDevice(session, deviceId);
     })().catch(() => {
       // TURN fetch or wakeDevice failure — surface as ended rather than throw.
       if (!cancelledRef.current) setStatus("ended");
@@ -98,16 +134,77 @@ export function useCall({
 
     return () => {
       cancelledRef.current = true;
-      // Invalidate any in-flight hold so a late getUserMedia stops its track.
+      // Invalidate any in-flight hold/camera acquire so late getUserMedia
+      // results stop their tracks instead of attaching.
       holdSeqRef.current += 1;
+      cameraSeqRef.current += 1;
       call?.hangUp();
       heldTrackRef.current?.stop();
       heldTrackRef.current = null;
+      cameraTrackRef.current?.stop();
+      cameraTrackRef.current = null;
       senderRef.current?.replaceTrack(null);
       senderRef.current = null;
+      videoSenderRef.current?.replaceTrack(null);
+      videoSenderRef.current = null;
+      signalingRef.current = null;
       pc?.close();
     };
   }, [session, baseUrl, deviceId]);
+
+  // Parent camera (two-way video). Mirrors the PTT latch: cameraSeqRef
+  // invalidates an in-flight getUserMedia on toggle-off/teardown so the camera
+  // indicator can never stick on after the user turned it off.
+  const acquireCamera = () => {
+    const seq = (cameraSeqRef.current += 1);
+    setCameraError(false);
+    void (async () => {
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch {
+        // No camera / permission denied — the call continues one-way.
+        if (seq === cameraSeqRef.current && !cancelledRef.current) {
+          setCameraError(true);
+          setCameraOn(false);
+        }
+        return;
+      }
+      const track = stream.getVideoTracks()[0];
+      if (seq !== cameraSeqRef.current || cancelledRef.current || !videoSenderRef.current) {
+        track?.stop();
+        return;
+      }
+      cameraTrackRef.current = track;
+      if (selfVideoRef.current) selfVideoRef.current.srcObject = stream;
+      await videoSenderRef.current.replaceTrack(track);
+      // A toggle-off may have raced in during replaceTrack — re-check and undo.
+      if (seq !== cameraSeqRef.current || cancelledRef.current) {
+        track.stop();
+        cameraTrackRef.current = null;
+        if (selfVideoRef.current) selfVideoRef.current.srcObject = null;
+        void videoSenderRef.current?.replaceTrack(null);
+        return;
+      }
+      signalingRef.current?.send({ kind: "camera-on" });
+      setCameraOn(true);
+    })();
+  };
+
+  const toggleCamera = () => {
+    if (cameraTrackRef.current) {
+      cameraSeqRef.current += 1; // invalidate any in-flight acquire
+      cameraTrackRef.current.stop();
+      cameraTrackRef.current = null;
+      if (selfVideoRef.current) selfVideoRef.current.srcObject = null;
+      void videoSenderRef.current?.replaceTrack(null);
+      signalingRef.current?.send({ kind: "camera-off" });
+      setCameraOn(false);
+    } else {
+      setCameraOn(true);
+      acquireCamera();
+    }
+  };
 
   // TRUE push-to-talk. holdStart acquires the mic; holdEnd releases it. The
   // monotonic holdSeq latch makes rapid hold/release safe: a release that lands
@@ -168,5 +265,9 @@ export function useCall({
     audioRef,
     holdStart,
     holdEnd,
+    cameraOn,
+    cameraError,
+    selfVideoRef,
+    toggleCamera,
   };
 }

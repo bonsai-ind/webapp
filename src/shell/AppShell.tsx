@@ -5,6 +5,8 @@ import type { LiveSync } from "../realtime/live-sync";
 import { useCryStatus } from "../cries/useCryStatus";
 import { CryAlertOverlay } from "../cries/CryAlertOverlay";
 import { SafetyOverlay } from "../safety/SafetyOverlay";
+import { IncomingCallOverlay } from "../video/IncomingCallOverlay";
+import { TemperatureAlertOverlay } from "../temperature/TemperatureAlertOverlay";
 import { useUnreadCount } from "../notifications/useNotifications";
 import { NotificationsOverlay } from "../notifications/NotificationsOverlay";
 import { useBabies } from "../babies/useBabies";
@@ -68,9 +70,22 @@ export function AppShell({
     });
   }, [liveSync, queryClient]);
 
+  // A Web Push tap deep-links via the service worker: sw.js focuses this window
+  // and posts {kind:"open-monitor", babyId} — land on the crying baby's monitor.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      const msg = e.data as { kind?: string; babyId?: string } | null;
+      if (msg?.kind === "open-monitor") goToMonitor(msg.babyId);
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Navigate to the Live Monitor for a specific baby (used by the cry alert's
-  // Open/Talk and the open-monitor notification action). Switches the active baby
-  // so MonitorScreen resolves that baby's device + call.
+  // Open action and the open-monitor notification action). Switches the active
+  // baby so MonitorScreen resolves that baby's device + call.
   const goToMonitor = (babyId?: string) => {
     if (babyId) setSelectedBabyId(babyId);
     setActive("Monitor");
@@ -181,12 +196,16 @@ export function AppShell({
 
       {/* Full-screen cry takeover + live-sync cache mirroring (ADR 0014). Lives
           here so Open/Talk can reach navigation. */}
-      {liveSync && (
-        <CryAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} onTalk={goToMonitor} />
-      )}
+      {liveSync && <CryAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
       {/* Position safety takeover (ADR 0005): reuses the cry alert language, lives
           here so its Open action can reach navigation. */}
       {liveSync && <SafetyOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
+      {/* Device-initiated call ring (call-request frame): Accept opens the Live
+          Monitor, whose normal wake+offer flow connects to the waiting camera peer. */}
+      {liveSync && <IncomingCallOverlay liveSync={liveSync} onAccept={goToMonitor} />}
+      {/* Temperature anomalies: red takeover for danger kinds, amber banner for
+          warnings; clears from the device's clear signal. */}
+      {liveSync && <TemperatureAlertOverlay liveSync={liveSync} onOpenMonitor={goToMonitor} />}
     </div>
   );
 }

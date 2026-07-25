@@ -140,3 +140,50 @@ describe("MonitorView — Simulate Camera", () => {
     expect(screen.queryByRole("button", { name: /simulate camera/i })).not.toBeInTheDocument();
   });
 });
+
+describe("MonitorView — two-way video (parent camera)", () => {
+  function renderTwoWay(props: { cameraOn?: boolean; cameraError?: boolean; onToggleCamera?: () => void }) {
+    return render(
+      <MonitorView
+        videoRef={createRef<HTMLVideoElement>()}
+        audioRef={createRef<HTMLAudioElement>()}
+        selfVideoRef={createRef<HTMLVideoElement>()}
+        status="live"
+        talkState="idle"
+        hasVideo
+        micError={false}
+        onHoldStart={() => {}}
+        onHoldEnd={() => {}}
+        onToggleCamera={() => {}}
+        {...props}
+      />,
+    );
+  }
+
+  test("camera toggle reflects on-state and fires the callback", () => {
+    const onToggleCamera = vi.fn();
+    renderTwoWay({ cameraOn: true, onToggleCamera });
+
+    const toggle = screen.getByRole("button", { name: "Camera off" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(toggle);
+    expect(onToggleCamera).toHaveBeenCalledOnce();
+  });
+
+  test("self-preview visible while camera on, hidden when off", () => {
+    renderTwoWay({ cameraOn: true });
+    expect(screen.getByTestId("self-preview")).not.toHaveClass("hidden");
+  });
+
+  test("camera off hides the preview and offers Camera on", () => {
+    renderTwoWay({ cameraOn: false });
+    expect(screen.getByTestId("self-preview")).toHaveClass("hidden");
+    expect(screen.getByRole("button", { name: "Camera on" })).toBeInTheDocument();
+  });
+
+  test("camera error surfaces a note without breaking the call UI", () => {
+    renderTwoWay({ cameraOn: false, cameraError: true });
+    expect(screen.getByText(/camera unavailable/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /hold to talk/i })).toBeInTheDocument();
+  });
+});

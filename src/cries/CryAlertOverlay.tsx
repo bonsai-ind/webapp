@@ -1,48 +1,87 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { LiveSync } from "../realtime/live-sync";
 import { createCacheSync } from "../realtime/cache-sync";
 import { useCryStatus } from "./useCryStatus";
 import { CryAlert } from "./CryAlert";
+import { startAlertFeedback, type AlertFeedback } from "./alert-feedback";
 
-// Resources whose server-pushed diffs replace the Query cache (echo-only, ADR-0004).
-const RESOURCES = ["babies", "summary", "cry-patterns", "growth"];
+// Resources whose server-pushed frames refresh the Query cache (ADR-0004).
+const RESOURCES = ["babies", "summary", "cry-patterns", "growth", "temperature"];
 
-// Connects the Live-sync stream to the app: mirrors resource diffs into the Query
-// cache, and overlays the full-screen cry alert whenever a baby is crying.
-// onOpenMonitor/onTalk navigate to the crying baby's Live Monitor (the shell owns
-// nav); both take the episode's babyId so the right baby/device is targeted.
+const SNOOZE_MS = 5 * 60_000;
+
+// Connects the Live-sync stream to the app: mirrors resource refreshes into the
+// Query cache, and overlays the full-screen cry alert whenever a baby is crying.
+// onOpenMonitor navigates to the crying baby's Live Monitor (the shell owns nav).
 export function CryAlertOverlay({
   liveSync,
   onOpenMonitor,
-  onTalk,
 }: {
   liveSync: LiveSync;
   onOpenMonitor?: (babyId?: string) => void;
-  onTalk?: (babyId?: string) => void;
 }) {
   const queryClient = useQueryClient();
   const status = useCryStatus(liveSync);
-  // Episode the user has acknowledged/snoozed: hide the takeover for it so the
-  // alert isn't a permanent trap (the cry-status stays "crying" until a calm
-  // frame). Keyed by episode id, so a NEW cry re-shows and a replayed/duplicate
-  // frame for the same episode stays dismissed.
-  const [dismissedEpisodeId, setDismissedEpisodeId] = useState<string>();
+  // Snoozed episodes: episodeId → wall-clock time the snooze expires. A REAL
+  // snooze — the takeover re-shows after 5 minutes if the episode is still
+  // active (a distracted parent must get re-nagged); a NEW episode always shows.
+  const [snoozedUntil, setSnoozedUntil] = useState<Record<string, number>>({});
+  // Ticks to re-evaluate snooze expiry while an episode is suppressed.
+  const [, setTick] = useState(0);
 
   useEffect(
     () => createCacheSync({ liveSync, queryClient, resources: RESOURCES }),
     [liveSync, queryClient],
   );
 
-  if (status.status !== "crying" || !status.episode) return null;
-  if (status.episode.id === dismissedEpisodeId) return null;
+  // Any cry lifecycle frame also refreshes the episode history list (the Cries
+  // screen's "Recent episodes"), so a new/ended episode appears without a
+  // manual refresh.
+  useEffect(
+    () =>
+      liveSync.on("cry-status", () => {
+        void queryClient.invalidateQueries({ queryKey: ["cries"] });
+      }),
+    [liveSync, queryClient],
+  );
 
-  const episode = status.episode;
-  const dismiss = () => setDismissedEpisodeId(episode.id);
-  // Open/Talk navigate to the crying baby's Live Monitor (the call auto-connects
-  // there; Talk is the on-screen push-to-talk), then clear the takeover. Snooze
-  // just clears it.
-  const open = () => { onOpenMonitor?.(episode.babyId); dismiss(); };
-  const talk = () => { onTalk?.(episode.babyId); dismiss(); };
-  return <CryAlert episode={episode} onOpen={open} onTalk={talk} onSnooze={dismiss} />;
+  const now = Date.now();
+  const active = status.status === "crying" ? status.episode : undefined;
+  const snoozed = active !== undefined && (snoozedUntil[active.id] ?? 0) > now;
+  const visible = active !== undefined && !snoozed;
+
+  // Re-check an active snooze when it lapses, so the alert re-nags on time.
+  useEffect(() => {
+    if (!active || !snoozed) return;
+    const remaining = snoozedUntil[active.id] - now;
+    const timer = setTimeout(() => setTick((t) => t + 1), remaining + 50);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, snoozed]);
+
+  // Chirp + vibration while the takeover is visible (stops on snooze, calm,
+  // open — anything that hides it).
+  const feedbackRef = useRef<AlertFeedback | null>(null);
+  useEffect(() => {
+    if (visible && !feedbackRef.current) {
+      feedbackRef.current = startAlertFeedback();
+    } else if (!visible && feedbackRef.current) {
+      feedbackRef.current.stop();
+      feedbackRef.current = null;
+    }
+    return () => {
+      feedbackRef.current?.stop();
+      feedbackRef.current = null;
+    };
+  }, [visible]);
+
+  if (!visible || !active) return null;
+
+  const snooze = () => setSnoozedUntil((s) => ({ ...s, [active.id]: Date.now() + SNOOZE_MS }));
+  const open = () => {
+    onOpenMonitor?.(active.babyId);
+    snooze(); // opening the monitor IS handling it; don't re-takeover mid-call
+  };
+  return <CryAlert episode={active} onOpen={open} onSnooze={snooze} />;
 }

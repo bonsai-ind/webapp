@@ -1,18 +1,31 @@
+import { useEffect, useState } from "react";
 import type { CryEpisode } from "./cry-status";
+
+// "Started 18s ago" — ticks every second from the client-side onset receipt.
+function elapsedLabel(startedAt: number, now: number): string {
+  const s = Math.max(0, Math.round((now - startedAt) / 1000));
+  if (s < 60) return `Started ${s}s ago`;
+  const m = Math.floor(s / 60);
+  return `Started ${m}m ${s % 60}s ago`;
+}
 
 // Variant A — full-screen takeover (DESIGN.md §3, slice 12). Saturated red,
 // reserved for an active cry. The foreground layer; OS push wakes a locked phone.
 export function CryAlert({
   episode,
   onOpen,
-  onTalk,
   onSnooze,
 }: {
   episode: CryEpisode;
   onOpen: () => void;
-  onTalk: () => void;
   onSnooze: () => void;
 }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div
       role="alertdialog"
@@ -26,8 +39,11 @@ export function CryAlert({
       <h1 className="text-[31px] font-extrabold tracking-[-0.02em] whitespace-nowrap">
         {episode.babyName} is crying
       </h1>
+      <p className="font-mono text-[12px] text-white/80" style={{ fontVariantNumeric: "tabular-nums" }}>
+        {elapsedLabel(episode.startedAt, now)}
+      </p>
       {episode.cause && (
-        <span className="rounded-full bg-white/15 px-3 py-1 font-mono text-[12px]">
+        <span className="rounded-full bg-white/15 px-3 py-1 font-mono text-[12px] capitalize">
           Likely cause: {episode.cause}
         </span>
       )}
@@ -39,22 +55,13 @@ export function CryAlert({
         >
           Open live monitor
         </button>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onTalk}
-            className="h-11 flex-1 rounded-[14px] border border-white/40 bg-white/10 font-semibold text-white"
-          >
-            Talk
-          </button>
-          <button
-            type="button"
-            onClick={onSnooze}
-            className="h-11 flex-1 rounded-[14px] border border-white/40 bg-white/10 font-semibold text-white"
-          >
-            Snooze
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onSnooze}
+          className="h-11 rounded-[14px] border border-white/40 bg-white/10 font-semibold text-white"
+        >
+          Snooze 5 min
+        </button>
       </div>
     </div>
   );
