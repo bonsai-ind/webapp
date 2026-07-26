@@ -22,19 +22,23 @@ export function SafetyOverlay({
       aria-label={`${episode.babyName} may be unsafe`}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-alert to-alert-2 px-[18px] text-center text-white"
     >
-      <h1 className="text-[31px] font-extrabold tracking-[-0.02em]">
+      <span className="font-mono text-[40px]" aria-hidden="true">
+        ⚠️
+      </span>
+      <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">
         {episode.babyName} may be unsafe
       </h1>
-      <span className="rounded-full bg-white/15 px-3 py-1 font-mono text-[12px]">
-        {postureText(episode.posture)}
-      </span>
-      <button
-        type="button"
-        onClick={() => onOpenMonitor?.(episode.babyId)}
-        className="h-12 rounded-[14px] bg-white font-semibold text-alert-2"
-      >
-        Open live monitor
-      </button>
+      <p className="max-w-sm text-[14px] text-white/85">{postureText(episode.posture)}</p>
+      <span className="rounded-full bg-white/15 px-3 py-1 font-mono text-[12px]">{episode.babyName}</span>
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => onOpenMonitor?.(episode.babyId)}
+          className="h-12 rounded-[14px] bg-white font-semibold text-alert-2"
+        >
+          Open live monitor
+        </button>
+      </div>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { DistressPanel } from "./DistressPanel";
 import { SleepPanel } from "./SleepPanel";
 import { TemperaturePanel } from "./TemperaturePanel";
 import { FeedingPanel } from "./FeedingPanel";
+import { GrowthPanel } from "./GrowthPanel";
 import { CallPanel } from "./CallPanel";
 
 // The claimed device's console: everything a real box does, as buttons.
@@ -85,6 +86,7 @@ export function SimulatorConsole({
         />
         <SleepPanel deviceSession={deviceSession} />
         <FeedingPanel deviceSession={deviceSession} />
+        <GrowthPanel deviceSession={deviceSession} />
       </div>
     </div>
   );

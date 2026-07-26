@@ -172,6 +172,19 @@ export async function reportDistressAlert(ds: DeviceSession, report: DistressAle
   await postJson(ds, "/device/distress-alert", report);
 }
 
+export interface GrowthMeasurementReport {
+  weightKg?: number;
+  lengthCm?: number;
+  headCircumferenceCm?: number;
+  takenAt?: string;
+}
+
+// A connected smart-scale reading (device-reported growth measurement). Real
+// hardware (Withings/Hatch-style) reports the same shape; the app plots it.
+export async function reportGrowthMeasurement(ds: DeviceSession, report: GrowthMeasurementReport): Promise<void> {
+  await postJson(ds, "/device/growth", report);
+}
+
 // Device-initiated call (this project's one backend addition): ask the backend
 // to ring every member of this device. callId is the device-minted dedup key.
 // An optional reason marks an automatic escalation (e.g. "face may be covered")

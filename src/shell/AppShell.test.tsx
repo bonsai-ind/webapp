@@ -55,10 +55,10 @@ describe("AppShell", () => {
     expect(screen.getByText(/not a substitute for emergency services/i)).toBeInTheDocument();
   });
 
-  test("renders the five tabs with Today active and its panel shown", () => {
+  test("renders the six tabs with Today active and its panel shown", () => {
     renderShell();
 
-    for (const label of ["Today", "Monitor", "Cries", "Growth", "Care"]) {
+    for (const label of ["Today", "Monitor", "Cries", "Growth", "Insights", "Care"]) {
       expect(screen.getByRole("tab", { name: label })).toBeInTheDocument();
     }
 

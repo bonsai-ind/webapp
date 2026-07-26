@@ -33,6 +33,26 @@ export async function postJson<T>(session: ApiClient, path: string, body: unknow
   return res.json();
 }
 
+// Authenticated PATCH with a JSON body → parsed JSON, or a typed ApiError on non-2xx.
+export async function patchJson<T>(session: ApiClient, path: string, body: unknown): Promise<T> {
+  const res = await session.authedFetch(path, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new ApiError(res.status);
+  return res.json();
+}
+
+// Authenticated GET → raw Blob (file downloads, e.g. the doctor-report CSV),
+// or a typed ApiError on non-2xx. Separate from getJson because res.json()
+// would choke on a CSV body.
+export async function getBlob(session: ApiClient, path: string): Promise<Blob> {
+  const res = await session.authedFetch(path);
+  if (!res.ok) throw new ApiError(res.status);
+  return res.blob();
+}
+
 const MAX_RETRIES = 2;
 
 // Authenticated DELETE → 204 No Content, or a typed ApiError on non-2xx.

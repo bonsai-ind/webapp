@@ -20,10 +20,13 @@ import { MonitorScreen } from "../video/MonitorScreen";
 import { SleepScreen } from "../sleep/SleepScreen";
 import { FeedingScreen } from "../feeding/FeedingScreen";
 import { ParentHubScreen } from "../parent/ParentHubScreen";
+import { InsightsScreen } from "../insights/InsightsScreen";
 import { useEngagementFeed } from "../parent/learn/useEngagementFeed";
 import { SosButton } from "../emergency/SosButton";
 import { EmergencyScreen } from "../emergency/EmergencyScreen";
 import { EmergencySosOverlay } from "../emergency/EmergencySosOverlay";
+import { BabyDetailsScreen } from "../babies/BabyDetailsScreen";
+import { AddBabyForm } from "../babies/AddBabyForm";
 import { AppHeader } from "./AppHeader";
 
 const NOOP_LIVE_SYNC: LiveSync = {
@@ -40,7 +43,7 @@ function greeting(): string {
   return "Good night";
 }
 
-const TABS = ["Today", "Monitor", "Cries", "Growth", "Care"] as const;
+const TABS = ["Today", "Monitor", "Cries", "Growth", "Insights", "Care"] as const;
 type Tab = (typeof TABS)[number];
 type SubScreen = "sleep" | "feeding" | null;
 
@@ -57,6 +60,8 @@ export function AppShell({
   const [subscreen, setSubscreen] = useState<SubScreen>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [sosOpen, setSosOpen] = useState(false);
+  const [babyDetailsOpen, setBabyDetailsOpen] = useState(false);
+  const [addBabyOpen, setAddBabyOpen] = useState(false);
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const { babies } = useBabies(session);
   const { orgs } = useOrgs(session);
@@ -135,6 +140,8 @@ export function AppShell({
         status={cryStatus.status}
         unreadCount={unread}
         onOpenNotifications={() => setNotificationsOpen(true)}
+        onOpenBabyDetails={activeBaby ? () => setBabyDetailsOpen(true) : undefined}
+        onAddBaby={() => setAddBabyOpen(true)}
         onSignOut={() => void session.logout()}
       />
       {orgs.length > 1 && (
@@ -160,6 +167,16 @@ export function AppShell({
         <h1 className="text-[25px] font-extrabold tracking-[-0.03em] text-ink">
           {subscreen === "sleep" ? "Sleep" : subscreen === "feeding" ? "Feeding" : active}
         </h1>
+        {babies.length === 0 && (
+          <button
+            type="button"
+            onClick={() => setAddBabyOpen(true)}
+            className="rounded-card border border-dashed border-primary/40 bg-primary-soft px-[18px] py-4 text-left"
+          >
+            <p className="text-[15px] font-bold text-primary">＋ Add your baby to get started</p>
+            <p className="text-[12.5px] text-ink-2">Set name, date of birth and sex to unlock growth tracking.</p>
+          </button>
+        )}
         {active === "Today" && subscreen === null && (
           <TodayScreen
             session={session}
@@ -181,11 +198,15 @@ export function AppShell({
         )}
         {active === "Cries" && <CriesScreen session={session} babyId={activeBaby?.id} />}
         {active === "Growth" && <GrowthScreen session={session} babyId={activeBaby?.id} />}
+        {active === "Insights" && <InsightsScreen session={session} babyId={activeBaby?.id} />}
         {active === "Care" && <ParentHubScreen session={session} babyId={activeBaby?.id} />}
       </main>
 
-      {/* Persistent SOS button — one tap to the Emergency screen from anywhere. */}
-      <SosButton onClick={() => setSosOpen(true)} />
+      {/* Persistent SOS button — one tap to the Emergency screen from anywhere.
+          Hidden while a full-screen overlay is open (it would float over them). */}
+      {!notificationsOpen && !babyDetailsOpen && !addBabyOpen && !sosOpen && (
+        <SosButton onClick={() => setSosOpen(true)} />
+      )}
 
       <nav
         role="tablist"
@@ -243,6 +264,36 @@ export function AppShell({
 
       {/* The Emergency (SOS) screen — top of the overlay stack. */}
       {sosOpen && <EmergencyScreen session={session} baby={activeBaby} onClose={() => setSosOpen(false)} />}
+
+      {/* Baby profile (view/edit) + Add baby — opened from the header switcher. */}
+      {babyDetailsOpen && activeBaby && (
+        <BabyDetailsScreen
+          session={session}
+          baby={activeBaby}
+          onClose={() => setBabyDetailsOpen(false)}
+          onArchived={() => {
+            setBabyDetailsOpen(false);
+            setSelectedBabyId(undefined);
+          }}
+        />
+      )}
+      {addBabyOpen && (
+        <div className="fixed inset-0 z-20 flex flex-col bg-bg pt-[env(safe-area-inset-top)]">
+          <header className="flex items-center gap-3 px-[18px] py-3">
+            <button type="button" onClick={() => setAddBabyOpen(false)} aria-label="Close" className="grid size-9 place-items-center rounded-full bg-surface text-[18px] text-ink-2">
+              ✕
+            </button>
+            <h1 className="text-[19px] font-extrabold text-ink">Add baby</h1>
+          </header>
+          <div className="flex-1 overflow-y-auto px-[18px] pb-10">
+            <AddBabyForm
+              session={session}
+              onDone={() => setAddBabyOpen(false)}
+              onCreated={(baby) => setSelectedBabyId(baby.id)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

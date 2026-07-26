@@ -54,6 +54,8 @@ export function AppHeader({
   status = "calm",
   unreadCount = 0,
   onOpenNotifications,
+  onOpenBabyDetails,
+  onAddBaby,
   onSignOut,
 }: {
   greeting?: string;
@@ -64,6 +66,8 @@ export function AppHeader({
   status?: StatusTone;
   unreadCount?: number;
   onOpenNotifications?: () => void;
+  onOpenBabyDetails?: () => void;
+  onAddBaby?: () => void;
   onSignOut?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -86,10 +90,10 @@ export function AppHeader({
             </span>
           </span>
         </button>
-        {open && babies.length > 0 && (
-          <ul className="absolute left-0 top-full z-10 mt-2 min-w-40 overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_14px_30px_-12px_rgba(22,23,31,0.25)]">
+        {open && (
+          <ul className="absolute left-0 top-full z-10 mt-2 min-w-52 overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_14px_30px_-12px_rgba(22,23,31,0.25)]">
             {babies.map((baby) => (
-              <li key={baby.id} className="border-b border-line last:border-b-0">
+              <li key={baby.id} className="border-b border-line">
                 <button
                   type="button"
                   onClick={() => {
@@ -103,6 +107,34 @@ export function AppHeader({
                 </button>
               </li>
             ))}
+            {babies.length > 0 && onOpenBabyDetails && (
+              <li className="border-b border-line">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenBabyDetails();
+                    setOpen(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-surface-2"
+                >
+                  View profile
+                </button>
+              </li>
+            )}
+            {onAddBaby && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddBaby();
+                    setOpen(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-[13px] font-semibold text-ink-2 transition-colors hover:bg-surface-2"
+                >
+                  ＋ Add baby
+                </button>
+              </li>
+            )}
           </ul>
         )}
       </div>

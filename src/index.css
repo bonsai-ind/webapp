@@ -70,3 +70,32 @@
     animation: bob 0.8s ease-in-out infinite;
   }
 }
+
+/* Doctor-report printing: while the ReportOverlay is mounted it tags <body>
+   with .print-mode. Print hides everything, re-reveals only the report, and
+   lets it flow as a normal document so the browser paginates it. */
+@media print {
+  body.print-mode * {
+    visibility: hidden;
+  }
+  body.print-mode .print-report,
+  body.print-mode .print-report * {
+    visibility: visible;
+  }
+  body.print-mode .print-report {
+    position: absolute !important;
+    inset: auto !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body.print-mode .print-report > div {
+    overflow: visible !important;
+  }
+  body.print-mode .no-print,
+  body.print-mode .no-print * {
+    display: none !important;
+  }
+}

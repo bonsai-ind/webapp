@@ -10,6 +10,7 @@ import {
   reportCry,
   reportFeeding,
   reportDistressAlert,
+  reportGrowthMeasurement,
   reportPosition,
   reportSleep,
   reportTemperature,
@@ -249,6 +250,14 @@ describe("simulator device API (firmware contract)", () => {
       confidence: 0.85,
       modelVersion: "sim",
     });
+  });
+
+  test("reportGrowthMeasurement posts the smart-scale reading shape", async () => {
+    const captured = capture("post", "/device/growth", { id: "gms_1" });
+
+    await reportGrowthMeasurement(ds(), { weightKg: 7.42, lengthCm: 66.1 });
+
+    expect(captured.body).toEqual({ weightKg: 7.42, lengthCm: 66.1 });
   });
 
   test("requestCall posts the device-minted callId", async () => {

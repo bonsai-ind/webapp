@@ -13,6 +13,22 @@ export interface Baby {
   // Parent hub's personalization clock (baby age + mother postpartum stage).
   dateOfBirth?: string;
   ageWeeks?: number;
+  // Sex + gestational age drive WHO growth percentiles.
+  sex?: "male" | "female";
+  gestationalAgeWeeks?: number;
+  // Profile (birth / care / emergency) — all optional.
+  birthWeightKg?: number;
+  birthLengthCm?: number;
+  birthHeadCircumferenceCm?: number;
+  deliveryType?: "vaginal" | "cesarean";
+  bloodType?: string;
+  allergies?: string;
+  medicalNotes?: string;
+  pediatricianName?: string;
+  pediatricianPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
 }
 
 export function useBabies(session: Session): { babies: Baby[]; isLoading: boolean } {
