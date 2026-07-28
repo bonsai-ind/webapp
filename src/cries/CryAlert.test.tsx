@@ -15,6 +15,16 @@ describe("CryAlert", () => {
     expect(screen.getByText(/started 18s ago/i)).toBeInTheDocument();
   });
 
+  test("shows the last-feed line when the episode carries it", () => {
+    render(<CryAlert episode={{ ...episode, lastFedAgo: "2h ago" }} onOpen={noop} onSnooze={noop} />);
+    expect(screen.getByText("Last fed 2h ago")).toBeInTheDocument();
+  });
+
+  test("omits the last-feed line when the baby has no recorded feeds", () => {
+    render(<CryAlert episode={episode} onOpen={noop} onSnooze={noop} />);
+    expect(screen.queryByText(/last fed/i)).not.toBeInTheDocument();
+  });
+
   test("the actions invoke their handlers; there is no Talk button", async () => {
     const onOpen = vi.fn();
     const onSnooze = vi.fn();

@@ -8,6 +8,7 @@ interface CryStatusData {
   babyId?: string;
   babyName?: string;
   cause?: string;
+  lastFedAgo?: string;
 }
 
 function toEvent(data: CryStatusData): CryStatusEvent {
@@ -18,6 +19,7 @@ function toEvent(data: CryStatusData): CryStatusEvent {
       babyId: data.babyId,
       babyName: data.babyName ?? "Your baby",
       cause: data.cause,
+      lastFedAgo: data.lastFedAgo,
       at: Date.now(),
     };
   }

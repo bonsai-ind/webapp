@@ -5,6 +5,9 @@ export interface CryEpisode {
   babyId?: string;
   babyName: string;
   cause?: string;
+  // "2h ago" copy from the backend — when the baby last fed, context for a
+  // hunger cry. Absent when the baby has no recorded feeds.
+  lastFedAgo?: string;
   // Client receipt time of the onset frame — drives the alert's elapsed line.
   startedAt: number;
 }
@@ -19,7 +22,7 @@ export interface CryStatus {
 }
 
 export type CryStatusEvent =
-  | { kind: "crying"; episodeId: string; babyId?: string; babyName: string; cause?: string; at: number }
+  | { kind: "crying"; episodeId: string; babyId?: string; babyName: string; cause?: string; lastFedAgo?: string; at: number }
   | { kind: "fussing" }
   // A calm clears ONLY its own episode (matched by episodeId, else babyId).
   // A bare calm with neither — a legacy frame — clears everything.
@@ -44,6 +47,7 @@ export function cryStatusReducer(state: CryStatus, event: CryStatusEvent): CrySt
         babyId: event.babyId,
         babyName: event.babyName,
         cause: event.cause,
+        lastFedAgo: event.lastFedAgo,
         startedAt: event.at,
       };
       const others = state.episodes.filter((e) => e.id !== event.episodeId);

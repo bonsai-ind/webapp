@@ -18,6 +18,18 @@ describe("cryStatusReducer", () => {
     expect(next.episode).toMatchObject({ id: "ep-7", babyName: "Mia", cause: "hungry", startedAt: 1000 });
   });
 
+  test("a crying event carries lastFedAgo onto the episode (drives the alert's feed line)", () => {
+    const next = cryStatusReducer(initialCryStatus, {
+      kind: "crying",
+      episodeId: "ep-7",
+      babyName: "Mia",
+      cause: "hungry",
+      lastFedAgo: "2h ago",
+      at: 1000,
+    });
+    expect(next.episode?.lastFedAgo).toBe("2h ago");
+  });
+
   test("a crying event carries the episode's babyId (drives Open navigation)", () => {
     const next = cry(initialCryStatus, "ep-7", "bby_42", "Mia");
     expect(next.episode?.babyId).toBe("bby_42");

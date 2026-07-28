@@ -47,6 +47,9 @@ export function CryAlert({
           Likely cause: {episode.cause}
         </span>
       )}
+      {episode.lastFedAgo && (
+        <p className="font-mono text-[12px] text-white/80">Last fed {episode.lastFedAgo}</p>
+      )}
       <div className="mt-2 flex w-full max-w-sm flex-col gap-2">
         <button
           type="button"
